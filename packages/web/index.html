@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRamid</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header>
+      <div class="header-brand">
+        <h1>PRamid</h1>
+        <span class="header-tag">v0.0.1</span>
+        <select id="branch-select" class="branch-select" aria-label="Current branch"></select>
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-view="view-graph">Graph</button>
+        <button class="nav-tab" data-view="view-stacks">Stacks</button>
+      </nav>
+
+      <span id="status">Connecting…</span>
+    </header>
+
+    <div id="stale-banner" class="hidden">
+      <span class="banner-icon">⚠</span>
+      <span class="banner-text"></span>
+      <button class="banner-dismiss" aria-label="Dismiss">×</button>
+    </div>
+
+    <!-- Graph view -->
+    <div id="view-graph" class="view">
+      <aside id="sidebar">
+        <div class="filter-section">
+          <h2>Search</h2>
+          <input id="search" class="ghost-input" type="text" placeholder="#42 or title…" autocomplete="off" />
+        </div>
+
+        <div class="filter-section">
+          <h2>CI Status</h2>
+          <div class="chip-group">
+            <button class="chip ci-success" data-filter="ci" data-value="success">✓ pass</button>
+            <button class="chip ci-failure" data-filter="ci" data-value="failure">✗ fail</button>
+            <button class="chip ci-pending" data-filter="ci" data-value="pending">… pending</button>
+            <button class="chip" data-filter="ci" data-value="none">· none</button>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <h2>Review</h2>
+          <div class="chip-group">
+            <button class="chip rev-approved" data-filter="review" data-value="approved">approved</button>
+            <button class="chip rev-changes_requested" data-filter="review" data-value="changes_requested">changes</button>
+            <button class="chip rev-pending" data-filter="review" data-value="pending">pending</button>
+            <button class="chip" data-filter="review" data-value="none">none</button>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <h2>Author</h2>
+          <input id="author-input" class="ghost-input" type="text" placeholder="username…" autocomplete="off" />
+        </div>
+
+        <button id="clear-btn">Clear filters</button>
+      </aside>
+
+      <div id="cy"></div>
+    </div>
+
+    <!-- Stacks view -->
+    <div id="view-stacks" class="view hidden">
+      <div class="stacks-header">
+        <div>
+          <h2 class="stacks-title">Active Stacks</h2>
+          <span id="stacks-count" class="stacks-subtitle"></span>
+        </div>
+      </div>
+
+      <div class="stacks-scroll">
+        <table id="stacks-table">
+          <thead>
+            <tr>
+              <th>Stack</th>
+              <th>Depth</th>
+              <th>CI</th>
+              <th>Review</th>
+              <th>Stale</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      <span>CI fill:</span>
+      <span class="legend-item"><span class="dot" style="background:#14532d;border-color:#22c55e"></span>success</span>
+      <span class="legend-item"><span class="dot" style="background:#7f1d1d;border-color:#ef4444"></span>failure</span>
+      <span class="legend-item"><span class="dot" style="background:#78350f;border-color:#f59e0b"></span>pending</span>
+      <span class="legend-item"><span class="dot" style="background:#1a2540"></span>none</span>
+      <span class="legend-sep"></span>
+      <span>Review border:</span>
+      <span class="legend-item"><span class="dot" style="border-color:#22c55e;background:transparent"></span>approved</span>
+      <span class="legend-item"><span class="dot" style="border-color:#ef4444;background:transparent"></span>changes</span>
+      <span class="legend-item"><span class="dot" style="border-color:#f59e0b;background:transparent"></span>pending</span>
+      <span class="legend-item"><span class="dot" style="border-color:#f97316;background:transparent;border-style:dashed"></span>stale</span>
+    </footer>
+
+    <!-- Hover tooltip -->
+    <div id="tooltip" aria-hidden="true">
+      <div class="tt-header">
+        <span class="tt-number"></span>
+        <span class="tt-draft hidden">draft</span>
+      </div>
+      <div class="tt-title"></div>
+      <div class="tt-author"></div>
+      <div class="tt-badges">
+        <span class="tt-badge tt-ci"></span>
+        <span class="tt-badge tt-review"></span>
+        <span class="tt-badge tt-stale hidden">⚠ stale</span>
+      </div>
+      <div class="tt-footer">Click node to open in GitHub</div>
+      <div class="tt-actions">
+        <button id="tt-reorder-btn" class="tt-action-btn">↑ Reorder</button>
+        <button id="tt-split-btn"   class="tt-action-btn">⊣ Split</button>
+        <button id="tt-merge-btn"   class="tt-action-btn">⊕ Merge</button>
+        <button id="tt-close-btn"   class="tt-action-btn tt-action-btn--danger">✕ Close</button>
+        <button id="tt-checkout-btn" class="tt-action-btn tt-action-btn--checkout">⎇ Checkout</button>
+      </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

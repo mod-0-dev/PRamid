@@ -1,0 +1,16 @@
+{
+  "name": "@pramid/web",
+  "type": "module",
+  "version": "0.0.1",
+  "dependencies": {
+    "cytoscape": "^3",
+    "cytoscape-dagre": "^2"
+  },
+  "devDependencies": {
+    "vite": "^6"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  }
+}

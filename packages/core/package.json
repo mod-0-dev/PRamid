@@ -1,0 +1,13 @@
+{
+  "name": "@pramid/core",
+  "type": "module",
+  "version": "0.0.1",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@octokit/graphql": "^9.0.3",
+    "@octokit/rest": "^22.0.1"
+  }
+}

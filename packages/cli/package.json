@@ -1,0 +1,18 @@
+{
+  "name": "@pramid/cli",
+  "type": "module",
+  "version": "0.0.1",
+  "bin": {
+    "pramid": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pramid/core": "workspace:*",
+    "@pramid/server": "workspace:*",
+    "commander": "^14.0.3"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build --compile src/index.ts --outfile ../../dist/pramid",
+    "test": "bun test"
+  }
+}
