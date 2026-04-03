@@ -2,7 +2,8 @@ import type { PullRequest, StackGraph } from "./graph.ts"
 import { buildGraph, type PrId } from "./graph.ts"
 import { getChildren, getParent, getRoots } from "./dag.ts"
 import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import { setBranchConfig, type GitRunner } from "./git-ops.ts"
+import { type GitRunner } from "./git-ops.ts"
+import { setParent } from "./pramid-state.ts"
 import { refreshStackNav } from "./stack-nav.ts"
 
 // ─── createStack ──────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ export async function createStack(
 
     // Persist the parent branch so restack can use --onto after a squash merge
     if (cwd) {
-      try { setBranchConfig(branch, "pramidParent", prevBranch, cwd, _gitRunner) } catch { /* ignore */ }
+      try { setParent(branch, prevBranch, cwd) } catch { /* ignore */ }
     }
 
     prevBranch = branch

@@ -3,8 +3,8 @@ import {
   getCurrentBranch,
   createBranch,
   pushBranch,
-  getBranchConfig,
-  setBranchConfig,
+  getParentBranch,
+  setParent,
   refreshStackNav,
 } from "@pramid/core"
 import { resolveRepo, resolveClient } from "../utils.ts"
@@ -21,7 +21,7 @@ export function buildBranchCommand(): Command {
 
       try {
         createBranch(name, cwd)
-        setBranchConfig(name, "pramidParent", parent, cwd)
+        setParent(name, parent, cwd)
         console.log(`Created branch ${name} (stacked on ${parent})`)
       } catch (err) {
         console.error("Error:", (err as Error).message)
@@ -70,9 +70,8 @@ export function registerPushCommand(program: Command): void {
             base = existingPr.baseBranch
           }
 
-          // Fall back to pramidParent git config (set by `pramid branch new`)
           if (!base) {
-            base = getBranchConfig(branch, "pramidParent", cwd) ?? undefined
+            base = getParentBranch(branch, cwd) ?? undefined
           }
 
           // Validate that the resolved base has an open PR or is a known trunk
@@ -117,7 +116,7 @@ export function registerPushCommand(program: Command): void {
         }
 
         // Persist parent for future restack --onto awareness
-        setBranchConfig(branch, "pramidParent", base, cwd)
+        setParent(branch, base, cwd)
 
         // 4. Refresh nav table in all PR descriptions for this stack
         const freshPrs = await client.listOpenPRs(repo)

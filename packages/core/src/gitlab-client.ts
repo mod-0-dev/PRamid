@@ -306,6 +306,13 @@ export class GitLabClient implements VcsClient {
         continue
       }
       const text = await resp.text().catch(() => "")
+      if (resp.status === 405 && strategy === "squash") {
+        throw new Error(
+          `GitLab rejected squash merge for MR !${iid} (405). ` +
+          `This usually means the branch is not up-to-date with its target. ` +
+          `Run \`pramid stack sync\` to rebase the stack onto the latest trunk, then retry.`,
+        )
+      }
       throw new Error(`GitLab API ${resp.status} for /merge: ${text}`)
     }
   }

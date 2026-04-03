@@ -3,7 +3,8 @@ import type { PullRequest } from "./graph.ts"
 import type { PrId } from "./graph.ts"
 import { buildGraph } from "./graph.ts"
 import { getDescendants, getParent, getStack, topologicalOrder } from "./dag.ts"
-import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, getBranchConfig, detectStackParent, forcePush, type GitRunner } from "./git-ops.ts"
+import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, type GitRunner } from "./git-ops.ts"
+import { getParentBranch } from "./pramid-state.ts"
 import { saveConflictState } from "./conflict-state.ts"
 
 export interface SyncParams {
@@ -99,7 +100,7 @@ export async function syncStack(client: VcsClient, params: SyncParams): Promise<
     const parentOldTip = parent ? savedTips.get(parent.id) : undefined
 
     const rootUpstream = !parentOldTip
-      ? (getBranchConfig(pr.headBranch, "pramidParent", cwd, _gitRunner) ??
+      ? (getParentBranch(pr.headBranch, cwd) ??
          detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
       : undefined
 

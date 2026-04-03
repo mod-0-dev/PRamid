@@ -186,48 +186,6 @@ export function rebaseAbort(cwd: string, runner: GitRunner = defaultRunner): voi
   run(runner, ["rebase", "--abort"], cwd)
 }
 
-// ─── Branch metadata (pramidParent) ───────────────────────────────────────────
-
-/**
- * Write a per-branch config value.
- * Used to persist the old parent branch name before it gets overwritten
- * by `updateBaseBranch` during a squash-merge workflow.
- */
-export function setBranchConfig(
-  branch: string,
-  key: string,
-  value: string,
-  cwd: string,
-  runner: GitRunner = defaultRunner,
-): void {
-  run(runner, ["config", `branch.${branch}.${key}`, value], cwd)
-}
-
-/**
- * Remove a per-branch config value.
- * Silently ignores git exit code 5 (key not found).
- */
-export function unsetBranchConfig(
-  branch: string,
-  key: string,
-  cwd: string,
-  runner: GitRunner = defaultRunner,
-): void {
-  run(runner, ["config", "--unset", `branch.${branch}.${key}`], cwd)
-  // exit code 5 means key was not set — that's fine, nothing to do
-}
-
-/** Read a per-branch config value. Returns null if not set. */
-export function getBranchConfig(
-  branch: string,
-  key: string,
-  cwd: string,
-  runner: GitRunner = defaultRunner,
-): string | null {
-  const { stdout, exitCode } = run(runner, ["config", `branch.${branch}.${key}`], cwd)
-  if (exitCode !== 0) return null
-  return stdout.trim() || null
-}
 
 /**
  * Find the most recent local branch whose tip is an ancestor of `branch`

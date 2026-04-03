@@ -3,7 +3,8 @@ import type { PullRequest } from "./graph.ts"
 import type { PrId } from "./graph.ts"
 import { buildGraph } from "./graph.ts"
 import { getDescendants, getParent, topologicalOrder } from "./dag.ts"
-import { rebaseBranch, rebaseOnto, getBranchSha, getBranchConfig, detectStackParent, forcePush, fetchRemote, type GitRunner } from "./git-ops.ts"
+import { rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, fetchRemote, type GitRunner } from "./git-ops.ts"
+import { getParentBranch } from "./pramid-state.ts"
 import { saveConflictState } from "./conflict-state.ts"
 
 export interface RestackParams {
@@ -80,7 +81,7 @@ export async function restack(client: VcsClient, params: RestackParams): Promise
     // squash-merged in a previous run.  Detect the old parent via stored config
     // first, then by scanning local branches.
     const rootUpstream = !parentOldTip
-      ? (getBranchConfig(pr.headBranch, "pramidParent", cwd, _gitRunner) ??
+      ? (getParentBranch(pr.headBranch, cwd) ??
          detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
       : undefined
 

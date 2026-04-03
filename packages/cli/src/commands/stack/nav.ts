@@ -5,7 +5,7 @@ import { resolveRepo, resolveClient } from "../../utils.ts"
 export function registerNavCommands(cmd: Command): void {
   cmd
     .command("log [branch]")
-    .description("Display the PR stack as a tree (defaults to all stacks; pass a branch to scope to one stack)")
+    .description("Display the PR stack as a tree (defaults to all stacks; pass a branch to show only that branch and its descendants)")
     .option("--repo <owner/repo>", "GitHub repository (default: auto-detect from git remote)")
     .option("--remote <name>", "Git remote name used for auto-detection", "origin")
     .option("--no-color", "Disable ANSI color output")

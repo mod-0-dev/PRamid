@@ -6,7 +6,7 @@ import {
   mergeStack,
   refreshStackNav,
   getCurrentBranch,
-  setBranchConfig,
+  setParent,
 } from "@pramid/core"
 import { resolveRepo, resolveClient } from "../../utils.ts"
 
@@ -116,7 +116,7 @@ export function registerLifecycleCommands(cmd: Command): void {
             console.log(`Re-targeted ${retargeted.length} child PR(s) to "${mergedPr.baseBranch}":`)
             for (const pr of retargeted) {
               console.log(`  #${pr.number}  ${pr.headBranch}`)
-              try { setBranchConfig(pr.headBranch, "pramidParent", pr.baseBranch, process.cwd()) } catch { /* ignore */ }
+              try { setParent(pr.headBranch, pr.baseBranch, process.cwd()) } catch { /* ignore */ }
             }
           }
         } else {
@@ -139,7 +139,7 @@ export function registerLifecycleCommands(cmd: Command): void {
           if (retargeted.length > 0) {
             console.log(`Re-targeted ${retargeted.length} PR(s)`)
             for (const { pr } of retargeted) {
-              try { setBranchConfig(pr.headBranch, "pramidParent", pr.baseBranch, process.cwd()) } catch { /* ignore */ }
+              try { setParent(pr.headBranch, pr.baseBranch, process.cwd()) } catch { /* ignore */ }
             }
           }
           if (failedAt) {

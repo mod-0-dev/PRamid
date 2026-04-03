@@ -2,7 +2,8 @@ import type { VcsClient, RepoRef } from "./vcs-client.ts"
 import type { PullRequest } from "./graph.ts"
 import { buildGraph } from "./graph.ts"
 import { getParent, getChildren, getDescendants, topologicalOrder } from "./dag.ts"
-import { rebaseOnto, forcePush, unsetBranchConfig, type GitRunner } from "./git-ops.ts"
+import { rebaseOnto, forcePush, type GitRunner } from "./git-ops.ts"
+import { unsetParent } from "./pramid-state.ts"
 
 // ─── reorderStack ─────────────────────────────────────────────────────────────
 
@@ -194,7 +195,7 @@ export async function splitStack(client: VcsClient, params: SplitParams): Promis
       await client.updateBaseBranch(b.id, a.baseBranch)
       // B is now a root PR — its old pramidParent (pointing to A) is no longer valid.
       // Clear it so future restack/sync operations don't treat it as a child of A.
-      try { unsetBranchConfig(b.headBranch, "pramidParent", cwd, _gitRunner) } catch { /* ignore */ }
+      try { unsetParent(b.headBranch, cwd) } catch { /* ignore */ }
     }
 
     // a.headBranch as upstream: exclude A's commits; git dedup skips any already-present commits
