@@ -1,16 +1,23 @@
-export * from "./graph.ts"
-export * from "./conflict-state.ts"
-export * from "./dag.ts"
-export * from "./vcs-client.ts"
-export * from "./github-client.ts"
-export * from "./gitlab-client.ts"
-export * from "./stack-service.ts"
-export * from "./git-ops.ts"
-export * from "./restack-service.ts"
-export * from "./reorder-service.ts"
-export * from "./close-service.ts"
-export * from "./merge-service.ts"
-export * from "./stack-nav.ts"
-export * from "./sync-service.ts"
-export * from "./nav-service.ts"
-export * from "./pramid-state.ts"
+// ─── Graph / DAG ─────────────────────────────────────────────────────────────
+export * from "./graph/graph.ts"
+export * from "./graph/dag.ts"
+
+// ─── Git operations & local state ────────────────────────────────────────────
+export * from "./git/git-ops.ts"
+export * from "./git/conflict-state.ts"
+export * from "./git/pramid-state.ts"
+
+// ─── VCS clients ─────────────────────────────────────────────────────────────
+export * from "./clients/vcs-client.ts"
+export * from "./clients/github-client.ts"
+export * from "./clients/gitlab-client.ts"
+
+// ─── Services ────────────────────────────────────────────────────────────────
+export * from "./services/stack-service.ts"
+export * from "./services/restack-service.ts"
+export * from "./services/reorder-service.ts"
+export * from "./services/close-service.ts"
+export * from "./services/merge-service.ts"
+export * from "./services/stack-nav.ts"
+export * from "./services/sync-service.ts"
+export * from "./services/nav-service.ts"

@@ -1,11 +1,11 @@
-import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import type { PullRequest } from "./graph.ts"
-import type { PrId } from "./graph.ts"
-import { buildGraph } from "./graph.ts"
-import { getDescendants, getParent, getStack, topologicalOrder } from "./dag.ts"
-import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, type GitRunner } from "./git-ops.ts"
-import { getParentBranch, pruneStaleParents } from "./pramid-state.ts"
-import { saveConflictState } from "./conflict-state.ts"
+import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import type { PrId } from "../graph/graph.ts"
+import { buildGraph } from "../graph/graph.ts"
+import { getDescendants, getParent, getStack, topologicalOrder } from "../graph/dag.ts"
+import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, type GitRunner } from "../git/git-ops.ts"
+import { getParentBranch, pruneStaleParents } from "../git/pramid-state.ts"
+import { saveConflictState } from "../git/conflict-state.ts"
 
 export interface SyncParams {
   repo: RepoRef

@@ -664,27 +664,41 @@ Resolve the conflict in your editor, stage the changes, then run `--continue`. T
 
 ## `pramid stack gc`
 
-Remove stale entries from `.git/pramid/stack.json` for branches that no longer exist locally. Entries accumulate whenever a branch is deleted or renamed outside of PRamid (plain `git branch -d`, `git branch -m`, etc.).
+Remove stale entries from `.git/pramid/stack.json` for branches that are no longer active. Two modes:
+
+**Local (default)** — removes entries where the branch doesn't exist locally:
 
 ```
 pramid stack gc
 pramid stack gc --dry-run
 ```
 
-This is also run automatically at the end of a successful `pramid stack sync`.
+**Remote-aware** — removes entries where the branch has no open PR _and_ no remote ref. This is the right command to run after merging a full stack, when the remote branches have been deleted but local branches may still exist:
+
+```
+pramid stack gc --remote
+pramid stack gc --remote --dry-run
+```
+
+The local check also runs automatically at the end of a successful `pramid stack sync`.
 
 **Options:**
 
 | Flag | Description |
 |---|---|
+| `--remote` | Prune entries with no open PR and no remote branch (requires API access) |
 | `--dry-run` | Print what would be removed without making any changes |
+| `--repo <owner/repo>` | Override auto-detected repository (used with `--remote`) |
+| `--remote-name <name>` | Git remote name (default: `origin`) |
 
-Example output:
+Example output (`--remote`):
 
 ```
-Removed 2 stale entry(s):
-  feat/old-auth    (branch not found locally)
-  fix/typo-v1      (branch not found locally)
+Removed 4 stale entry(s):
+  feat/auth              (no open PR, not on remote)
+  feat/auth-tests        (no open PR, not on remote)
+  feat/auth-docs         (no open PR, not on remote)
+  fix/typo               (no open PR, not on remote)
 Stack config is clean.
 ```
 

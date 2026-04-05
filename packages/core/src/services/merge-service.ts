@@ -1,7 +1,7 @@
-import type { VcsClient, RepoRef, MergeStrategy } from "./vcs-client.ts"
-import type { PullRequest } from "./graph.ts"
-import { buildGraph } from "./graph.ts"
-import { getChildren, getDescendants, topologicalOrder } from "./dag.ts"
+import type { VcsClient, RepoRef, MergeStrategy } from "../clients/vcs-client.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import { buildGraph } from "../graph/graph.ts"
+import { getChildren, getDescendants, topologicalOrder } from "../graph/dag.ts"
 
 // ─── Single-PR merge ──────────────────────────────────────────────────────────
 

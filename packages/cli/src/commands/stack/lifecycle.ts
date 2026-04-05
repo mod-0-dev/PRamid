@@ -10,7 +10,9 @@ import {
   getAllParents,
   pushBranch,
   branchExists,
+  remoteBranchExists,
   pruneStaleParents,
+  pruneStaleParentsRemote,
 } from "@pramid/core"
 import { resolveRepo, resolveClient } from "../../utils.ts"
 
@@ -292,35 +294,96 @@ export function registerLifecycleCommands(cmd: Command): void {
 
   cmd
     .command("gc")
-    .description("Remove stale stack config entries for branches that no longer exist locally")
+    .description("Remove stale stack config entries for branches that no longer exist locally or on the remote")
+    .option("--remote", "Also prune entries with no open PR and no remote branch (requires API access)")
+    .option("--repo <owner/repo>", "GitHub/GitLab repository (default: auto-detect from git remote)")
+    .option("--remote-name <name>", "Git remote name used for auto-detection", "origin")
     .option("--dry-run", "Print what would be removed without making any changes")
-    .action((opts: { dryRun?: boolean }) => {
+    .action(async (opts: { remote?: boolean; repo?: string; remoteName: string; dryRun?: boolean }) => {
       const cwd = process.cwd()
 
-      if (opts.dryRun) {
-        const allParents = getAllParents(cwd)
-        const stale = Object.keys(allParents).filter((b) => !branchExists(b, cwd))
-        if (stale.length === 0) {
-          console.log("Stack config is clean — no stale entries found.")
-          return
-        }
-        console.log(`Would remove ${stale.length} stale entry(s):`)
-        for (const b of stale) console.log(`  ${b}  (branch not found locally)`)
-        return
-      }
+      if (opts.remote) {
+        // ── Remote-aware pruning ───────────────────────────────────────────────
+        const repo = resolveRepo(opts.repo, opts.remoteName)
+        const client = resolveClient(opts.remoteName)
 
-      try {
-        const { removed } = pruneStaleParents(cwd)
-        if (removed.length === 0) {
-          console.log("Stack config is clean — no stale entries found.")
+        console.log("Fetching open PRs...")
+        let openPrBranches: Set<string>
+        try {
+          const prs = await client.listOpenPRs(repo)
+          openPrBranches = new Set(prs.map((pr) => pr.headBranch))
+        } catch (err) {
+          console.error("Error fetching open PRs:", (err as Error).message)
+          process.exit(1)
           return
         }
-        console.log(`Removed ${removed.length} stale entry(s):`)
-        for (const b of removed) console.log(`  ${b}  (branch not found locally)`)
-        console.log("Stack config is clean.")
-      } catch (err) {
-        console.error("Error:", (err as Error).message)
-        process.exit(1)
+
+        const allParents = getAllParents(cwd)
+        const entries = Object.keys(allParents)
+        console.log(`Checking ${entries.length} entr${entries.length === 1 ? "y" : "ies"} against remote...`)
+
+        const stale: string[] = []
+        for (const b of entries) {
+          if (openPrBranches.has(b)) continue
+          process.stdout.write(`  ${b}... `)
+          if (remoteBranchExists(b, opts.remoteName, cwd)) {
+            process.stdout.write("active\n")
+          } else {
+            process.stdout.write("stale\n")
+            stale.push(b)
+          }
+        }
+
+        if (opts.dryRun) {
+          if (stale.length === 0) {
+            console.log("Stack config is clean — no stale entries found.")
+            return
+          }
+          console.log(`\nWould remove ${stale.length} stale entry(s):`)
+          for (const b of stale) console.log(`  ${b}`)
+          return
+        }
+
+        try {
+          const { removed } = pruneStaleParentsRemote(cwd, opts.remoteName, openPrBranches)
+          if (removed.length === 0) {
+            console.log("\nStack config is clean — no stale entries found.")
+            return
+          }
+          console.log(`\nRemoved ${removed.length} stale entry(s):`)
+          for (const b of removed) console.log(`  ${b}`)
+          console.log("Stack config is clean.")
+        } catch (err) {
+          console.error("Error:", (err as Error).message)
+          process.exit(1)
+        }
+      } else {
+        // ── Local-only pruning (original behaviour) ────────────────────────────
+        if (opts.dryRun) {
+          const allParents = getAllParents(cwd)
+          const stale = Object.keys(allParents).filter((b) => !branchExists(b, cwd))
+          if (stale.length === 0) {
+            console.log("Stack config is clean — no stale entries found.")
+            return
+          }
+          console.log(`Would remove ${stale.length} stale entry(s):`)
+          for (const b of stale) console.log(`  ${b}  (branch not found locally)`)
+          return
+        }
+
+        try {
+          const { removed } = pruneStaleParents(cwd)
+          if (removed.length === 0) {
+            console.log("Stack config is clean — no stale entries found.")
+            return
+          }
+          console.log(`Removed ${removed.length} stale entry(s):`)
+          for (const b of removed) console.log(`  ${b}  (branch not found locally)`)
+          console.log("Stack config is clean.")
+        } catch (err) {
+          console.error("Error:", (err as Error).message)
+          process.exit(1)
+        }
       }
     })
 }

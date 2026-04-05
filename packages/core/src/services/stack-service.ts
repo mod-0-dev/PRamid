@@ -1,9 +1,9 @@
-import type { PullRequest, StackGraph } from "./graph.ts"
-import { buildGraph, type PrId } from "./graph.ts"
-import { getChildren, getParent, getRoots } from "./dag.ts"
-import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import { type GitRunner } from "./git-ops.ts"
-import { setParent } from "./pramid-state.ts"
+import type { PullRequest, StackGraph } from "../graph/graph.ts"
+import { buildGraph, type PrId } from "../graph/graph.ts"
+import { getChildren, getParent, getRoots } from "../graph/dag.ts"
+import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import { type GitRunner } from "../git/git-ops.ts"
+import { setParent } from "../git/pramid-state.ts"
 import { refreshStackNav } from "./stack-nav.ts"
 
 // ─── createStack ──────────────────────────────────────────────────────────────

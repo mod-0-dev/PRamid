@@ -1,4 +1,4 @@
-import type { RebaseResult } from "./vcs-client.ts"
+import type { RebaseResult } from "../clients/vcs-client.ts"
 
 // ─── GitRunner interface ───────────────────────────────────────────────────────
 
@@ -94,6 +94,17 @@ export function checkoutBranch(branch: string, cwd: string, runner: GitRunner = 
 export function createBranch(name: string, cwd: string, runner: GitRunner = defaultRunner): void {
   const { exitCode, stderr } = run(runner, ["checkout", "-b", name], cwd)
   if (exitCode !== 0) throw new Error(`git checkout -b ${name} failed: ${stderr.trim()}`)
+}
+
+/** Return true if the branch exists on the given remote. */
+export function remoteBranchExists(
+  branch: string,
+  remote: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): boolean {
+  const { stdout, exitCode } = run(runner, ["ls-remote", "--heads", remote, branch], cwd)
+  return exitCode === 0 && stdout.trim().length > 0
 }
 
 /** Push a branch to the remote (plain push, not force). */

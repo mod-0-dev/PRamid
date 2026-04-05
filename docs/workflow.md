@@ -229,11 +229,11 @@ pramid stack merge feat/auth --strategy rebase
 After branches are merged or deleted, remove stale entries from the local stack config:
 
 ```bash
-pramid stack gc           # removes entries for branches that no longer exist locally
-pramid stack gc --dry-run # preview first
+pramid stack gc --remote           # removes entries with no open PR and no remote branch
+pramid stack gc --remote --dry-run # preview first
 ```
 
-This also runs automatically after every successful `pramid stack sync`.
+`--remote` is the right command after a full stack merge — it cleans up entries even if local branches still exist. The plain `pramid stack gc` (no flag) only prunes branches that are gone locally, and also runs automatically after every successful `pramid stack sync`.
 
 ---
 
@@ -253,7 +253,7 @@ This also runs automatically after every successful `pramid stack sync`.
 | Detach a branch into its own stack | `pramid stack split <branch>` |
 | Close a PR and bridge its children | `pramid stack close <branch>` |
 | Merge the full stack | `pramid stack merge <branch>` |
-| Remove stale config entries | `pramid stack gc` |
+| Remove stale config entries (post-merge) | `pramid stack gc --remote` |
 | Preview any destructive command | `--dry-run` |
 
 For full option details see [`docs/usage.md`](usage.md).

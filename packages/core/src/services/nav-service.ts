@@ -1,6 +1,6 @@
-import { buildGraph } from "./graph.ts"
-import { getChildren, getParent } from "./dag.ts"
-import type { PullRequest } from "./graph.ts"
+import { buildGraph } from "../graph/graph.ts"
+import { getChildren, getParent } from "../graph/dag.ts"
+import type { PullRequest } from "../graph/graph.ts"
 
 export type NavResult =
   | { ok: true; branch: string; atRoot?: true }

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
-import { branchExists } from "./git-ops.ts"
+import { branchExists, remoteBranchExists } from "./git-ops.ts"
 
 interface PramidState {
   parents: Record<string, string>
@@ -63,6 +63,32 @@ export function pruneStaleParents(cwd: string): PruneResult {
 
   for (const branch of Object.keys(state.parents)) {
     if (!branchExists(branch, cwd)) {
+      removed.push(branch)
+      delete state.parents[branch]
+    }
+  }
+
+  if (removed.length > 0) writeState(cwd, state)
+  return { removed }
+}
+
+/**
+ * Remove entries from stack.json for branches that have no open PR and no
+ * remote ref — i.e. the branch was merged and cleaned up on the remote.
+ * The open PR list must be fetched by the caller (avoids a hidden API call).
+ */
+export function pruneStaleParentsRemote(
+  cwd: string,
+  remote: string,
+  openPrBranches: Set<string>,
+): PruneResult {
+  const state = readState(cwd)
+  const removed: string[] = []
+
+  for (const branch of Object.keys(state.parents)) {
+    const hasOpenPr = openPrBranches.has(branch)
+    const existsOnRemote = remoteBranchExists(branch, remote, cwd)
+    if (!hasOpenPr && !existsOnRemote) {
       removed.push(branch)
       delete state.parents[branch]
     }

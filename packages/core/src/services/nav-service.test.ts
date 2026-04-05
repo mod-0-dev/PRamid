@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { stackGoto, stackNext, stackPrev } from "./nav-service.ts"
-import type { PullRequest } from "./graph.ts"
+import type { PullRequest } from "../graph/graph.ts"
 
 const makePr = (n: number, head: string, base: string): PullRequest => ({
   id: `github:acme/app#${n}`,

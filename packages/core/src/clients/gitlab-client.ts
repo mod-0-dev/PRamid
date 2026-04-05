@@ -1,5 +1,5 @@
 import type { VcsClient, RepoRef, MergeStrategy, RebaseResult, CreatePRParams } from "./vcs-client.ts"
-import type { PullRequest, CiStatus, ReviewStatus } from "./graph.ts"
+import type { PullRequest, CiStatus, ReviewStatus } from "../graph/graph.ts"
 
 // ─── PrId helpers ─────────────────────────────────────────────────────────────
 

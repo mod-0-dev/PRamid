@@ -1,8 +1,8 @@
 import { describe, expect, test, mock } from "bun:test"
 import { reorderStack, splitStack } from "./reorder-service.ts"
-import type { PullRequest } from "./graph.ts"
-import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import type { GitRunner } from "./git-ops.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { GitRunner } from "../git/git-ops.ts"
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

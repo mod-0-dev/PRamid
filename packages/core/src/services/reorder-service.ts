@@ -1,9 +1,9 @@
-import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import type { PullRequest } from "./graph.ts"
-import { buildGraph } from "./graph.ts"
-import { getParent, getChildren, getDescendants, topologicalOrder } from "./dag.ts"
-import { rebaseOnto, forcePush, type GitRunner } from "./git-ops.ts"
-import { unsetParent } from "./pramid-state.ts"
+import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import { buildGraph } from "../graph/graph.ts"
+import { getParent, getChildren, getDescendants, topologicalOrder } from "../graph/dag.ts"
+import { rebaseOnto, forcePush, type GitRunner } from "../git/git-ops.ts"
+import { unsetParent } from "../git/pramid-state.ts"
 
 // ─── reorderStack ─────────────────────────────────────────────────────────────
 

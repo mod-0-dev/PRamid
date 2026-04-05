@@ -102,8 +102,9 @@ pramid stack sync --abort
 pramid stack update-nav feat/step-1
 
 # Remove stale stack config entries for deleted/renamed branches
-pramid stack gc
-pramid stack gc --dry-run   # preview without changes
+pramid stack gc                      # local check (branch gone locally)
+pramid stack gc --remote             # remote check (no open PR + not on remote)
+pramid stack gc --remote --dry-run   # preview without changes
 
 # Start the web UI (opens browser automatically at http://localhost:7420)
 pramid gui

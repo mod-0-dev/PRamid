@@ -1,7 +1,7 @@
-import type { VcsClient, RepoRef } from "./vcs-client.ts"
-import type { PullRequest } from "./graph.ts"
-import { buildGraph } from "./graph.ts"
-import { getStack } from "./dag.ts"
+import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import { buildGraph } from "../graph/graph.ts"
+import { getStack } from "../graph/dag.ts"
 
 const NAV_START = "<!-- pramid-nav:start -->"
 const NAV_END   = "<!-- pramid-nav:end -->"
