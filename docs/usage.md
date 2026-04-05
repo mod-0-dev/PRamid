@@ -115,16 +115,36 @@ pramid stack create main feat/step-1 feat/step-2 feat/step-3
 
 ---
 
+### All-at-once (recommended for tracked stacks)
+
+You built the stack with `pramid branch new`, made commits on each branch, and now want to push and open all PRs in one go.
+
+```bash
+git checkout main
+pramid branch new feat/auth       # records parent: main
+# ... commit changes ...
+pramid branch new feat/auth-tests # records parent: feat/auth
+# ... commit changes ...
+
+pramid stack submit               # pushes both + creates both PRs + refreshes nav
+```
+
+`stack submit` discovers the full stack automatically from the recorded parent relationships and submits everything in root-to-tip order. It is idempotent — re-running after adding commits or more branches is safe.
+
+**When to use:** you built the stack with `pramid branch new` and want to publish all branches at once instead of calling `pramid push` on each one.
+
+---
+
 ### Quick comparison
 
-| | Incremental | Batch |
-|---|---|---|
-| Start | `pramid branch new` | `git checkout -b` |
-| Publish | `pramid push` (one PR at a time) | `pramid stack create` (all at once) |
-| Parent tracking | Stored in git config automatically | Inferred from branch order you supply |
-| Best for | New stacks built step by step | Existing branch chains |
+| | Incremental | All-at-once | Batch |
+|---|---|---|---|
+| Start | `pramid branch new` | `pramid branch new` | `git checkout -b` |
+| Publish | `pramid push` (one PR at a time) | `pramid stack submit` (all at once) | `pramid stack create` (all at once) |
+| Parent tracking | Stored automatically | Stored automatically | Inferred from branch order you supply |
+| Best for | PRs opened as you go | Publish entire stack in one shot | Existing branch chains without parent records |
 
-Both workflows produce the same end state and are fully compatible with the rest of the `pramid stack` commands (`restack`, `reorder`, `sync`, etc.).
+All three produce the same end state and are fully compatible with the rest of the `pramid stack` commands (`restack`, `reorder`, `sync`, etc.).
 
 ---
 
@@ -409,6 +429,50 @@ PR titles are auto-generated from branch names (`feat/add-auth` → `feat: add a
 
 ---
 
+## `pramid stack submit [branch]`
+
+Push every branch in the current stack and create or update their PRs — in a single command. This is the fastest way to submit an entire stack that was built with `pramid branch new` / `pramid push`.
+
+```
+pramid stack submit
+pramid stack submit feat/step-2
+pramid stack submit --draft
+pramid stack submit --dry-run
+```
+
+- Discovers the stack automatically from the parent relationships recorded in `.git/pramid/stack.json`.
+- Pushes branches in root-to-tip order.
+- Creates a PR for each branch that doesn't have one yet; updates the base branch on PRs where it changed.
+- Refreshes the navigation table in every PR description after all PRs are created/updated.
+- Idempotent — safe to re-run after adding more commits or branches.
+
+If `[branch]` is omitted, the current git branch is used as the starting point. The command walks up to the stack root and then submits all branches in the connected stack.
+
+**Options:**
+
+| Flag | Description |
+|---|---|
+| `--draft` | Create new PRs as drafts |
+| `--dry-run` | Print what would be pushed and which PRs would be created/updated, without making any changes |
+| `--repo <owner/repo>` | Override auto-detected repository |
+| `--remote <name>` | Git remote name (default: `origin`) |
+
+**Typical workflow:**
+
+```bash
+git checkout main
+pramid branch new feat/auth
+# ... commit changes ...
+pramid branch new feat/auth-tests
+# ... commit changes ...
+pramid branch new feat/auth-docs
+# ... commit changes ...
+
+pramid stack submit   # pushes all three branches + creates/updates all PRs
+```
+
+---
+
 ## `pramid stack restack <branch>`
 
 Rebase `<branch>` and all PRs stacked above it onto their parents, then force-push.
@@ -595,6 +659,34 @@ Resolve the conflict, then:
 ```
 
 Resolve the conflict in your editor, stage the changes, then run `--continue`. To discard the sync entirely, run `--abort`.
+
+---
+
+## `pramid stack gc`
+
+Remove stale entries from `.git/pramid/stack.json` for branches that no longer exist locally. Entries accumulate whenever a branch is deleted or renamed outside of PRamid (plain `git branch -d`, `git branch -m`, etc.).
+
+```
+pramid stack gc
+pramid stack gc --dry-run
+```
+
+This is also run automatically at the end of a successful `pramid stack sync`.
+
+**Options:**
+
+| Flag | Description |
+|---|---|
+| `--dry-run` | Print what would be removed without making any changes |
+
+Example output:
+
+```
+Removed 2 stale entry(s):
+  feat/old-auth    (branch not found locally)
+  fix/typo-v1      (branch not found locally)
+Stack config is clean.
+```
 
 ---
 

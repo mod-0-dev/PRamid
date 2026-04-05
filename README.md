@@ -45,6 +45,12 @@ pramid status
 pramid stack log
 pramid stack log feat/step-2   # scope to one stack
 
+# Push all branches in the stack and create/update their PRs in one command
+pramid stack submit                  # auto-discovers stack from current branch
+pramid stack submit feat/step-2      # start from a specific branch
+pramid stack submit --draft          # create new PRs as drafts
+pramid stack submit --dry-run        # preview without pushing
+
 # Create a stack from local branches (branches must be pushed)
 pramid stack create main feat/step-1 feat/step-2 feat/step-3
 
@@ -95,12 +101,16 @@ pramid stack sync --abort
 # Rebuild the navigation table in every PR description
 pramid stack update-nav feat/step-1
 
+# Remove stale stack config entries for deleted/renamed branches
+pramid stack gc
+pramid stack gc --dry-run   # preview without changes
+
 # Start the web UI (opens browser automatically at http://localhost:7420)
 pramid gui
 pramid gui --port 8080   # use a different port
 ```
 
-See [`docs/usage.md`](docs/usage.md) for the full command reference.
+See [`docs/workflow.md`](docs/workflow.md) for a start-to-finish walkthrough and [`docs/usage.md`](docs/usage.md) for the full command reference.
 
 ## Dev setup
 

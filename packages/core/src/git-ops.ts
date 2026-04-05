@@ -74,6 +74,11 @@ export function getCurrentBranch(cwd: string, runner: GitRunner = defaultRunner)
   return stdout.trim()
 }
 
+export function branchExists(branch: string, cwd: string, runner: GitRunner = defaultRunner): boolean {
+  const { exitCode } = run(runner, ["rev-parse", "--verify", branch], cwd)
+  return exitCode === 0
+}
+
 export function getBranchSha(branch: string, cwd: string, runner: GitRunner = defaultRunner): string {
   const { stdout, exitCode, stderr } = run(runner, ["rev-parse", branch], cwd)
   if (exitCode !== 0) throw new Error(`Branch not found: "${branch}": ${stderr.trim()}`)

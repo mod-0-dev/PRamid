@@ -15,6 +15,8 @@ export interface CreateStackParams {
   branches: string[]
   /** Override the PR title for a branch. Defaults to branchToTitle(branch). */
   titleFn?: (branch: string) => string
+  /** Create new PRs as drafts. */
+  draft?: boolean
   /** Local repo path — used to persist pramidParent metadata in git config. */
   cwd?: string
   /** Inject a custom git runner (for testing). */
@@ -37,7 +39,7 @@ export async function createStack(
   repo: RepoRef,
   params: CreateStackParams,
 ): Promise<CreateStackResult> {
-  const { base, branches, titleFn = branchToTitle, cwd, _gitRunner } = params
+  const { base, branches, titleFn = branchToTitle, draft, cwd, _gitRunner } = params
   const existing = await client.listOpenPRs(repo)
   const byHead = new Map(existing.map((pr) => [pr.headBranch, pr]))
 
@@ -62,6 +64,7 @@ export async function createStack(
         head: branch,
         base: prevBranch,
         title: titleFn(branch),
+        draft,
       })
       created.push(newPr)
     }

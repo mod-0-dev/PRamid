@@ -4,7 +4,7 @@ import type { PrId } from "./graph.ts"
 import { buildGraph } from "./graph.ts"
 import { getDescendants, getParent, getStack, topologicalOrder } from "./dag.ts"
 import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, type GitRunner } from "./git-ops.ts"
-import { getParentBranch } from "./pramid-state.ts"
+import { getParentBranch, pruneStaleParents } from "./pramid-state.ts"
 import { saveConflictState } from "./conflict-state.ts"
 
 export interface SyncParams {
@@ -149,6 +149,9 @@ export async function syncStack(client: VcsClient, params: SyncParams): Promise<
 
     synced.push(pr)
   }
+
+  // Prune stale stack.json entries now that we know which branches are live
+  pruneStaleParents(cwd)
 
   return { root, baseBranch, synced, conflict: null, skipped: [] }
 }

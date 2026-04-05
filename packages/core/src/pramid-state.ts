@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { branchExists } from "./git-ops.ts"
 
 interface PramidState {
   parents: Record<string, string>
@@ -46,4 +47,27 @@ export function unsetParent(branch: string, cwd: string): void {
 /** Return all recorded parent relationships as a plain object. */
 export function getAllParents(cwd: string): Record<string, string> {
   return { ...readState(cwd).parents }
+}
+
+export interface PruneResult {
+  removed: string[]
+}
+
+/**
+ * Remove entries from stack.json for branches that no longer exist locally.
+ * Safe to call at any time — only writes if there is something to remove.
+ */
+export function pruneStaleParents(cwd: string): PruneResult {
+  const state = readState(cwd)
+  const removed: string[] = []
+
+  for (const branch of Object.keys(state.parents)) {
+    if (!branchExists(branch, cwd)) {
+      removed.push(branch)
+      delete state.parents[branch]
+    }
+  }
+
+  if (removed.length > 0) writeState(cwd, state)
+  return { removed }
 }

@@ -7,6 +7,10 @@ import {
   refreshStackNav,
   getCurrentBranch,
   setParent,
+  getAllParents,
+  pushBranch,
+  branchExists,
+  pruneStaleParents,
 } from "@pramid/core"
 import { resolveRepo, resolveClient } from "../../utils.ts"
 
@@ -173,6 +177,147 @@ export function registerLifecycleCommands(cmd: Command): void {
         }
         await refreshStackNav(client, repo, prs, pr)
         console.log(`Updated stack navigation in PR descriptions.`)
+      } catch (err) {
+        console.error("Error:", (err as Error).message)
+        process.exit(1)
+      }
+    })
+
+  cmd
+    .command("submit [branch]")
+    .description("Push all branches in the stack and create or update their PRs")
+    .option("--repo <owner/repo>", "GitHub repository (default: auto-detect from git remote)")
+    .option("--remote <name>", "Git remote name used for auto-detection", "origin")
+    .option("--draft", "Create new PRs as drafts")
+    .option("--dry-run", "Print what would be done without pushing or modifying PRs")
+    .action(async (
+      branch: string | undefined,
+      opts: { repo?: string; remote: string; draft?: boolean; dryRun?: boolean },
+    ) => {
+      const cwd = process.cwd()
+      const repo = resolveRepo(opts.repo, opts.remote)
+      const client = resolveClient(opts.remote)
+      const startBranch = branch ?? getCurrentBranch(cwd)
+
+      // ── Discover the stack via recorded parent relationships ──────────────────
+      const allParents = getAllParents(cwd)
+      const TRUNK = new Set(["main", "master", "develop", "dev"])
+
+      // Walk up from startBranch to find the root of the stack
+      let root = startBranch
+      const walked = new Set<string>()
+      while (true) {
+        const parent = allParents[root]
+        if (!parent || TRUNK.has(parent) || TRUNK.has(root) || walked.has(root)) break
+        walked.add(root)
+        root = parent
+      }
+
+      // Build a child map so we can walk downward
+      const childMap = new Map<string, string[]>()
+      for (const [b, p] of Object.entries(allParents)) {
+        if (!childMap.has(p)) childMap.set(p, [])
+        childMap.get(p)!.push(b)
+      }
+
+      // BFS from root — collects branches in root-to-tip order, skipping ghost entries
+      const stackBranches: string[] = []
+      const bfsQueue = [root]
+      const seen = new Set<string>()
+      while (bfsQueue.length > 0) {
+        const b = bfsQueue.shift()!
+        if (seen.has(b)) continue
+        seen.add(b)
+        if (!branchExists(b, cwd)) {
+          console.warn(`Warning: "${b}" is in stack config but does not exist locally — skipping.`)
+          continue
+        }
+        stackBranches.push(b)
+        for (const child of childMap.get(b) ?? []) {
+          bfsQueue.push(child)
+        }
+      }
+
+      const base = allParents[root] ?? "main"
+
+      if (opts.dryRun) {
+        console.log(`Would submit ${stackBranches.length} branch(es) onto "${base}":`)
+        let prev = base
+        for (const b of stackBranches) {
+          console.log(`  push ${b}  →  PR: ${b} → ${prev}`)
+          prev = b
+        }
+        return
+      }
+
+      // ── Push each branch ──────────────────────────────────────────────────────
+      for (const b of stackBranches) {
+        try {
+          pushBranch(b, opts.remote, cwd)
+          console.log(`Pushed ${b}`)
+        } catch (err) {
+          console.error(`Error pushing "${b}":`, (err as Error).message)
+          process.exit(1)
+        }
+      }
+
+      // ── Create / update PRs and refresh nav ──────────────────────────────────
+      try {
+        const { created, updated, unchanged } = await createStack(client, repo, {
+          base,
+          branches: stackBranches,
+          draft: opts.draft,
+          cwd,
+        })
+
+        if (created.length > 0) {
+          console.log(`Created ${created.length} PR(s):`)
+          for (const pr of created) console.log(`  #${pr.number}  ${pr.title}  (${pr.headBranch} → ${pr.baseBranch})`)
+        }
+        if (updated.length > 0) {
+          console.log(`Updated base for ${updated.length} PR(s):`)
+          for (const pr of updated) console.log(`  #${pr.number}  ${pr.title}  (${pr.headBranch} → ${pr.baseBranch})`)
+        }
+        if (unchanged.length > 0) {
+          console.log(`${unchanged.length} PR(s) already correct — no changes needed.`)
+        }
+        if (created.length === 0 && updated.length === 0) {
+          console.log("Stack is already up to date.")
+        }
+      } catch (err) {
+        console.error("Error:", (err as Error).message)
+        process.exit(1)
+      }
+    })
+
+  cmd
+    .command("gc")
+    .description("Remove stale stack config entries for branches that no longer exist locally")
+    .option("--dry-run", "Print what would be removed without making any changes")
+    .action((opts: { dryRun?: boolean }) => {
+      const cwd = process.cwd()
+
+      if (opts.dryRun) {
+        const allParents = getAllParents(cwd)
+        const stale = Object.keys(allParents).filter((b) => !branchExists(b, cwd))
+        if (stale.length === 0) {
+          console.log("Stack config is clean — no stale entries found.")
+          return
+        }
+        console.log(`Would remove ${stale.length} stale entry(s):`)
+        for (const b of stale) console.log(`  ${b}  (branch not found locally)`)
+        return
+      }
+
+      try {
+        const { removed } = pruneStaleParents(cwd)
+        if (removed.length === 0) {
+          console.log("Stack config is clean — no stale entries found.")
+          return
+        }
+        console.log(`Removed ${removed.length} stale entry(s):`)
+        for (const b of removed) console.log(`  ${b}  (branch not found locally)`)
+        console.log("Stack config is clean.")
       } catch (err) {
         console.error("Error:", (err as Error).message)
         process.exit(1)
