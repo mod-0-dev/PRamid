@@ -1,11 +1,19 @@
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { RebaseResult, RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { saveConflictState } from "../git/conflict-state.ts"
+import {
+  type GitRunner,
+  detectStackParent,
+  fetchRemote,
+  forcePush,
+  getBranchSha,
+  rebaseBranch,
+  rebaseOnto,
+} from "../git/git-ops.ts"
+import { getParentBranch } from "../git/pramid-state.ts"
+import { getDescendants, getParent, topologicalOrder } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import type { PrId } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getDescendants, getParent, topologicalOrder } from "../graph/dag.ts"
-import { rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, fetchRemote, type GitRunner } from "../git/git-ops.ts"
-import { getParentBranch } from "../git/pramid-state.ts"
-import { saveConflictState } from "../git/conflict-state.ts"
 
 export interface RestackParams {
   repo: RepoRef
@@ -82,10 +90,10 @@ export async function restack(client: VcsClient, params: RestackParams): Promise
     // first, then by scanning local branches.
     const rootUpstream = !parentOldTip
       ? (getParentBranch(pr.headBranch, cwd) ??
-         detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
+        detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
       : undefined
 
-    let result
+    let result: RebaseResult
     if (parentOldTip) {
       // Child rebased in this run — use parent's (now-rebased) local head as target
       result = rebaseOnto(pr.headBranch, onto, parentOldTip, cwd, _gitRunner)
@@ -93,7 +101,13 @@ export async function restack(client: VcsClient, params: RestackParams): Promise
       // Root PR after squash-merge — fetch remote base and land on its current tip,
       // not on the (possibly stale) local branch.
       fetchRemote(remote, pr.baseBranch, cwd, _gitRunner)
-      result = rebaseOnto(pr.headBranch, `${remote}/${pr.baseBranch}`, rootUpstream, cwd, _gitRunner)
+      result = rebaseOnto(
+        pr.headBranch,
+        `${remote}/${pr.baseBranch}`,
+        rootUpstream,
+        cwd,
+        _gitRunner,
+      )
     } else {
       result = rebaseBranch(pr.headBranch, onto, cwd, _gitRunner)
     }

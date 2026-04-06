@@ -1,13 +1,18 @@
-import { describe, expect, test, mock } from "bun:test"
-import { branchToTitle, createStack, formatLog, formatStatus } from "./stack-service.ts"
+import { describe, expect, mock, test } from "bun:test"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
 import type { PullRequest } from "../graph/graph.ts"
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import { branchToTitle, createStack, formatLog, formatStatus } from "./stack-service.ts"
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const REPO: RepoRef = { owner: "acme", repo: "app" }
 
-const makePr = (n: number, head: string, base: string, extra: Partial<PullRequest> = {}): PullRequest => ({
+const makePr = (
+  n: number,
+  head: string,
+  base: string,
+  extra: Partial<PullRequest> = {},
+): PullRequest => ({
   id: `github:acme/app#${n}`,
   platform: "github",
   number: n,
@@ -83,13 +88,16 @@ describe("createStack", () => {
       branches: ["feat/step-1", "feat/step-2", "feat/step-3"],
     })
 
-    const calls = (client.createPR as ReturnType<typeof mock>).mock.calls as [RepoRef, { head: string; base: string }][]
-    expect(calls[0]![1].head).toBe("feat/step-1")
-    expect(calls[0]![1].base).toBe("main")
-    expect(calls[1]![1].head).toBe("feat/step-2")
-    expect(calls[1]![1].base).toBe("feat/step-1")
-    expect(calls[2]![1].head).toBe("feat/step-3")
-    expect(calls[2]![1].base).toBe("feat/step-2")
+    const calls = (client.createPR as ReturnType<typeof mock>).mock.calls as [
+      RepoRef,
+      { head: string; base: string },
+    ][]
+    expect(calls[0]?.[1].head).toBe("feat/step-1")
+    expect(calls[0]?.[1].base).toBe("main")
+    expect(calls[1]?.[1].head).toBe("feat/step-2")
+    expect(calls[1]?.[1].base).toBe("feat/step-1")
+    expect(calls[2]?.[1].head).toBe("feat/step-3")
+    expect(calls[2]?.[1].base).toBe("feat/step-2")
   })
 
   test("updates base branch when PR exists with wrong base", async () => {
@@ -131,8 +139,11 @@ describe("createStack", () => {
       titleFn: (b) => `Custom: ${b}`,
     })
 
-    const calls = (client.createPR as ReturnType<typeof mock>).mock.calls as [RepoRef, { title: string }][]
-    expect(calls[0]![1].title).toBe("Custom: feat/step-1")
+    const calls = (client.createPR as ReturnType<typeof mock>).mock.calls as [
+      RepoRef,
+      { title: string },
+    ][]
+    expect(calls[0]?.[1].title).toBe("Custom: feat/step-1")
   })
 })
 

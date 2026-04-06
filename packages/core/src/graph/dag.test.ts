@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test"
-import { buildGraph } from "./graph.ts"
-import type { PullRequest } from "./graph.ts"
 import {
   detectCycles,
   getChildren,
@@ -11,6 +9,8 @@ import {
   markStale,
   topologicalOrder,
 } from "./dag.ts"
+import { buildGraph } from "./graph.ts"
+import type { PullRequest } from "./graph.ts"
 
 const makePr = (n: number, head: string, base: string): PullRequest => ({
   id: `github:owner/repo#${n}`,
@@ -48,7 +48,7 @@ describe("getRoots", () => {
     const roots = getRoots(graph)
 
     expect(roots).toHaveLength(1)
-    expect(roots[0]!.id).toBe(PR1.id)
+    expect(roots[0]?.id).toBe(PR1.id)
   })
 
   test("returns multiple roots for independent stacks", () => {
@@ -112,7 +112,7 @@ describe("getStack", () => {
 
   test("first element is always the root", () => {
     const graph = buildGraph([PR1, PR2, PR3])
-    expect(getStack(graph, PR3.id)[0]!.id).toBe(PR1.id)
+    expect(getStack(graph, PR3.id)[0]?.id).toBe(PR1.id)
   })
 
   test("returns the full branching tree from any member", () => {
@@ -204,32 +204,32 @@ describe("markStale", () => {
     const graph = buildGraph([PR1, PR2, PR3])
     markStale(graph, PR1.id)
 
-    expect(graph.nodes.get(PR1.id)!.stale).toBe(true)
-    expect(graph.nodes.get(PR2.id)!.stale).toBe(true)
-    expect(graph.nodes.get(PR3.id)!.stale).toBe(true)
+    expect(graph.nodes.get(PR1.id)?.stale).toBe(true)
+    expect(graph.nodes.get(PR2.id)?.stale).toBe(true)
+    expect(graph.nodes.get(PR3.id)?.stale).toBe(true)
   })
 
   test("does not mark unrelated PRs stale", () => {
     const graph = buildGraph([PR1, PR2, PR4])
     markStale(graph, PR1.id)
 
-    expect(graph.nodes.get(PR4.id)!.stale).toBe(false)
+    expect(graph.nodes.get(PR4.id)?.stale).toBe(false)
   })
 
   test("marking a leaf only affects that leaf", () => {
     const graph = buildGraph([PR1, PR2, PR3])
     markStale(graph, PR3.id)
 
-    expect(graph.nodes.get(PR3.id)!.stale).toBe(true)
-    expect(graph.nodes.get(PR1.id)!.stale).toBe(false)
-    expect(graph.nodes.get(PR2.id)!.stale).toBe(false)
+    expect(graph.nodes.get(PR3.id)?.stale).toBe(true)
+    expect(graph.nodes.get(PR1.id)?.stale).toBe(false)
+    expect(graph.nodes.get(PR2.id)?.stale).toBe(false)
   })
 
   test("does not mutate other fields on the PR", () => {
     const graph = buildGraph([PR1, PR2])
     markStale(graph, PR1.id)
 
-    const updated = graph.nodes.get(PR1.id)!
+    const updated = graph.nodes.get(PR1.id) as PullRequest
     expect(updated.title).toBe(PR1.title)
     expect(updated.headBranch).toBe(PR1.headBranch)
   })

@@ -64,7 +64,7 @@ export function topologicalOrder(graph: StackGraph): PullRequest[] {
 
   const result: PullRequest[] = []
   while (queue.length > 0) {
-    const id = queue.shift()!
+    const id = queue.shift() as PrId
     const pr = graph.nodes.get(id)
     if (pr) result.push(pr)
     for (const childId of children.get(id) ?? []) {
@@ -121,7 +121,7 @@ export function getDescendants(graph: StackGraph, prId: PrId): PullRequest[] {
   const seen = new Set<PrId>()
   const queue = [prId]
   while (queue.length > 0) {
-    const id = queue.shift()!
+    const id = queue.shift() as PrId
     if (seen.has(id)) continue
     seen.add(id)
     const pr = graph.nodes.get(id)

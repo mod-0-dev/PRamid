@@ -1,7 +1,14 @@
-import { Octokit } from "@octokit/rest"
 import { graphql } from "@octokit/graphql"
-import type { VcsClient, RepoRef, MergeStrategy, RebaseResult, CreatePRParams } from "./vcs-client.ts"
-import type { PullRequest, CiStatus, ReviewStatus } from "../graph/graph.ts"
+import { Octokit } from "@octokit/rest"
+import type { CiStatus, PullRequest, ReviewStatus } from "../graph/graph.ts"
+import { sleep } from "../utils.ts"
+import type {
+  CreatePRParams,
+  MergeStrategy,
+  RebaseResult,
+  RepoRef,
+  VcsClient,
+} from "./vcs-client.ts"
 
 // ─── PrId helpers ─────────────────────────────────────────────────────────────
 
@@ -11,7 +18,7 @@ function parsePrId(prId: string): { owner: string; repo: string; number: number 
   if (!match) {
     throw new Error(`Invalid GitHub PrId: "${prId}". Expected "github:owner/repo#number".`)
   }
-  return { owner: match[1]!, repo: match[2]!, number: Number(match[3]) }
+  return { owner: match[1] as string, repo: match[2] as string, number: Number(match[3]) }
 }
 
 function makePrId(owner: string, repo: string, number: number): string {
@@ -95,36 +102,36 @@ const GET_PR_QUERY = `
 
 // ─── Mapping helpers ──────────────────────────────────────────────────────────
 
-function mapReviewDecision(
-  value: GqlPrNode["reviewDecision"],
-): ReviewStatus {
+function mapReviewDecision(value: GqlPrNode["reviewDecision"]): ReviewStatus {
   switch (value) {
-    case "APPROVED": return "approved"
-    case "CHANGES_REQUESTED": return "changes_requested"
-    case "REVIEW_REQUIRED": return "pending"
-    default: return "none"
+    case "APPROVED":
+      return "approved"
+    case "CHANGES_REQUESTED":
+      return "changes_requested"
+    case "REVIEW_REQUIRED":
+      return "pending"
+    default:
+      return "none"
   }
 }
 
-function mapCiStatus(
-  rollup: GqlPrNode["statusCheckRollup"],
-): CiStatus {
+function mapCiStatus(rollup: GqlPrNode["statusCheckRollup"]): CiStatus {
   if (!rollup) return "none"
   switch (rollup.state) {
-    case "SUCCESS": return "success"
+    case "SUCCESS":
+      return "success"
     case "FAILURE":
-    case "ERROR": return "failure"
+    case "ERROR":
+      return "failure"
     case "PENDING":
-    case "EXPECTED": return "pending"
-    default: return "none"
+    case "EXPECTED":
+      return "pending"
+    default:
+      return "none"
   }
 }
 
-function gqlNodeToPullRequest(
-  node: GqlPrNode,
-  owner: string,
-  repo: string,
-): PullRequest {
+function gqlNodeToPullRequest(node: GqlPrNode, owner: string, repo: string): PullRequest {
   return {
     id: makePrId(owner, repo, node.number),
     platform: "github",
@@ -137,7 +144,8 @@ function gqlNodeToPullRequest(
     baseBranch: node.baseRefName,
     ciStatus: mapCiStatus(node.statusCheckRollup),
     reviewStatus: mapReviewDecision(node.reviewDecision),
-    mergeable: node.mergeable === "MERGEABLE" ? true : node.mergeable === "CONFLICTING" ? false : null,
+    mergeable:
+      node.mergeable === "MERGEABLE" ? true : node.mergeable === "CONFLICTING" ? false : null,
     stale: false,
     merged: node.state === "MERGED",
     draft: node.isDraft,
@@ -156,7 +164,7 @@ function isRateLimitError(err: unknown): err is HttpError & { retryAfterMs: numb
   const e = err as HttpError
   if (e.status === 429) {
     const retryAfter = Number(e.headers?.["retry-after"] ?? 60)
-    ;(e as unknown as Record<string, unknown>)["retryAfterMs"] = retryAfter * 1000
+    ;(e as unknown as Record<string, unknown>).retryAfterMs = retryAfter * 1000
     return true
   }
   if (e.status === 403) {
@@ -164,20 +172,16 @@ function isRateLimitError(err: unknown): err is HttpError & { retryAfterMs: numb
     const reset = e.headers?.["x-ratelimit-reset"]
     if (remaining === "0" && reset) {
       const waitMs = Math.max(0, Number(reset) * 1000 - Date.now()) + 1000
-      ;(e as unknown as Record<string, unknown>)["retryAfterMs"] = waitMs
+      ;(e as unknown as Record<string, unknown>).retryAfterMs = waitMs
       return true
     }
     // Secondary rate limit message
     if (e.message?.toLowerCase().includes("secondary rate limit")) {
-      ;(e as unknown as Record<string, unknown>)["retryAfterMs"] = 60_000
+      ;(e as unknown as Record<string, unknown>).retryAfterMs = 60_000
       return true
     }
   }
   return false
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // ─── Internal Octokit types for injection ────────────────────────────────────
@@ -243,13 +247,14 @@ export class GitHubClient implements VcsClient {
     let cursor: string | null = null
 
     do {
-      const response = await this.#withRetry(() =>
-        this.#graphql(LIST_OPEN_PRS_QUERY, {
-          owner: repo.owner,
-          repo: repo.repo,
-          cursor,
-        }) as Promise<GqlListOpenPRsResponse>,
-      ) as GqlListOpenPRsResponse
+      const response = (await this.#withRetry(
+        () =>
+          this.#graphql(LIST_OPEN_PRS_QUERY, {
+            owner: repo.owner,
+            repo: repo.repo,
+            cursor,
+          }) as Promise<GqlListOpenPRsResponse>,
+      )) as GqlListOpenPRsResponse
 
       for (const node of response.repository.pullRequests.nodes) {
         results.push(gqlNodeToPullRequest(node, repo.owner, repo.repo))
@@ -267,11 +272,12 @@ export class GitHubClient implements VcsClient {
   async getPR(prId: string): Promise<PullRequest> {
     const { owner, repo, number } = parsePrId(prId)
 
-    const response = await this.#withRetry(() =>
-      this.#graphql(GET_PR_QUERY, { owner, repo, number }) as Promise<{
-        repository: { pullRequest: GqlPrNode | null }
-      }>,
-    ) as { repository: { pullRequest: GqlPrNode | null } }
+    const response = (await this.#withRetry(
+      () =>
+        this.#graphql(GET_PR_QUERY, { owner, repo, number }) as Promise<{
+          repository: { pullRequest: GqlPrNode | null }
+        }>,
+    )) as { repository: { pullRequest: GqlPrNode | null } }
 
     const node = response.repository.pullRequest
     if (!node) {

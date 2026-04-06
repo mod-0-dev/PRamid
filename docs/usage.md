@@ -295,7 +295,7 @@ Output: `Created branch feat/step-2 (stacked on feat/step-1)`
 
 ## `pramid push`
 
-Push the current branch to the remote and create or update its PR — all in one command. Infers the base branch automatically from the existing PR graph or the `pramidParent` git config written by `pramid branch new`.
+Push the current branch to the remote and create or update its PR — all in one command. Infers the base branch automatically from the existing PR graph or the parent relationship recorded in `.git/pramid/stack.json` by `pramid branch new`.
 
 ```
 pramid push
@@ -305,7 +305,7 @@ pramid push --base main       # explicit base when auto-detection can't resolve
 
 **Base branch resolution order:**
 1. Existing open PR for this branch — idempotent re-runs
-2. `pramidParent` git config — set by `pramid branch new`
+2. Parent relationship in `.git/pramid/stack.json` — set by `pramid branch new`
 3. `--base <branch>` flag — explicit fallback
 
 After creating or updating the PR, the stack navigation table is refreshed in all PR descriptions.

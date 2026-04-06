@@ -1,10 +1,10 @@
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { getStack } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getStack } from "../graph/dag.ts"
 
 const NAV_START = "<!-- pramid-nav:start -->"
-const NAV_END   = "<!-- pramid-nav:end -->"
+const NAV_END = "<!-- pramid-nav:end -->"
 
 // ─── Block generation ─────────────────────────────────────────────────────────
 
@@ -17,7 +17,9 @@ export function buildNavBlock(orderedPrs: PullRequest[], currentPrId: string): s
   const rows = orderedPrs.map((pr) => {
     const isCurrent = pr.id === currentPrId
     const marker = isCurrent ? "→" : " "
-    const title  = isCurrent ? `**[#${pr.number} ${esc(pr.title)}](${pr.url})**` : `[#${pr.number} ${esc(pr.title)}](${pr.url})`
+    const title = isCurrent
+      ? `**[#${pr.number} ${esc(pr.title)}](${pr.url})**`
+      : `[#${pr.number} ${esc(pr.title)}](${pr.url})`
     const branch = `\`${pr.headBranch}\``
     return `| ${marker} | ${title} | ${branch} |`
   })
@@ -41,15 +43,15 @@ export function buildNavBlock(orderedPrs: PullRequest[], currentPrId: string): s
  */
 export function injectNavBlock(body: string, navBlock: string): string {
   const startIdx = body.indexOf(NAV_START)
-  const endIdx   = body.indexOf(NAV_END)
+  const endIdx = body.indexOf(NAV_END)
 
   if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
     // Replace existing block
     const before = body.slice(0, startIdx).trimEnd()
-    const after  = body.slice(endIdx + NAV_END.length).trimStart()
-    const parts  = [navBlock]
-    if (before) parts.unshift(before + "\n\n")
-    if (after)  parts.push("\n\n" + after)
+    const after = body.slice(endIdx + NAV_END.length).trimStart()
+    const parts = [navBlock]
+    if (before) parts.unshift(`${before}\n\n`)
+    if (after) parts.push(`\n\n${after}`)
     return parts.join("")
   }
 
@@ -76,8 +78,8 @@ export async function refreshStackNav(
   if (stackPrs.length === 0) return
 
   for (const pr of stackPrs) {
-    const navBlock  = buildNavBlock(stackPrs, pr.id)
-    const newBody   = injectNavBlock(pr.body, navBlock)
+    const navBlock = buildNavBlock(stackPrs, pr.id)
+    const newBody = injectNavBlock(pr.body, navBlock)
     if (newBody !== pr.body) {
       await client.updatePRBody(pr.id, newBody)
     }

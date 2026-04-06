@@ -1,4 +1,4 @@
-import type { PullRequest, CiStatus, ReviewStatus } from "../graph/graph.ts"
+import type { CiStatus, PullRequest, ReviewStatus } from "../graph/graph.ts"
 
 export interface RepoRef {
   owner: string

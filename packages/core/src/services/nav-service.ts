@@ -1,5 +1,5 @@
-import { buildGraph } from "../graph/graph.ts"
 import { getChildren, getParent } from "../graph/dag.ts"
+import { buildGraph } from "../graph/graph.ts"
 import type { PullRequest } from "../graph/graph.ts"
 
 export type NavResult =
@@ -29,7 +29,7 @@ export function stackNext(prs: PullRequest[], currentBranch: string): NavResult 
   }
 
   if (children.length === 1) {
-    return { ok: true, branch: children[0]!.headBranch }
+    return { ok: true, branch: children[0]?.headBranch }
   }
 
   return {
@@ -75,7 +75,7 @@ export function stackGoto(prs: PullRequest[], query: string): NavResult {
 
   // PR number match: "12" or "#12"
   const numStr = query.startsWith("#") ? query.slice(1) : query
-  const num = parseInt(numStr, 10)
+  const num = Number.parseInt(numStr, 10)
   if (!Number.isNaN(num) && String(num) === numStr) {
     const byNumber = prs.find((pr) => pr.number === num)
     if (byNumber) return { ok: true, branch: byNumber.headBranch }
@@ -84,7 +84,7 @@ export function stackGoto(prs: PullRequest[], query: string): NavResult {
   // Partial branch name substring match
   const partial = prs.filter((pr) => pr.headBranch.includes(query))
 
-  if (partial.length === 1) return { ok: true, branch: partial[0]!.headBranch }
+  if (partial.length === 1) return { ok: true, branch: partial[0]?.headBranch }
 
   if (partial.length > 1) {
     return {

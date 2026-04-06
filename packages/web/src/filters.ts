@@ -22,7 +22,7 @@ export function applyFilters(): void {
   const search = filters.search.toLowerCase()
   const author = filters.author.toLowerCase()
 
-  cy.nodes().forEach((node) => {
+  for (const node of cy.nodes()) {
     const label: string = node.data("label") ?? ""
     const nodeAuthor: string = (node.data("author") ?? "").toLowerCase()
     const ciStatus: string = node.data("ciStatus") ?? "none"
@@ -38,15 +38,15 @@ export function applyFilters(): void {
     } else {
       node.addClass("dimmed")
     }
-  })
+  }
 
-  cy.edges().forEach((edge) => {
+  for (const edge of cy.edges()) {
     if (edge.source().hasClass("dimmed") || edge.target().hasClass("dimmed")) {
       edge.addClass("dimmed")
     } else {
       edge.removeClass("dimmed")
     }
-  })
+  }
 }
 
 // ─── Wire up DOM controls ─────────────────────────────────────────────────────
@@ -66,10 +66,10 @@ export function setupFilterControls(): void {
     applyFilters()
   })
 
-  document.querySelectorAll<HTMLButtonElement>(".chip[data-filter]").forEach((chip) => {
+  for (const chip of document.querySelectorAll<HTMLButtonElement>(".chip[data-filter]")) {
     chip.addEventListener("click", () => {
-      const filterGroup = chip.dataset["filter"]!
-      const value = chip.dataset["value"]!
+      const filterGroup = chip.dataset.filter as string
+      const value = chip.dataset.value as string
       const set = filterGroup === "ci" ? filters.ciStatus : filters.reviewStatus
 
       if (set.has(value)) {
@@ -82,7 +82,7 @@ export function setupFilterControls(): void {
 
       applyFilters()
     })
-  })
+  }
 
   clearBtn.addEventListener("click", () => {
     filters.search = ""
@@ -92,7 +92,7 @@ export function setupFilterControls(): void {
 
     searchInput.value = ""
     authorInput.value = ""
-    document.querySelectorAll(".chip.active").forEach((c) => c.classList.remove("active"))
+    for (const c of document.querySelectorAll(".chip.active")) c.classList.remove("active")
 
     applyFilters()
   })

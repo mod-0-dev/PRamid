@@ -1,20 +1,20 @@
-import { createInterface } from "readline"
+import { createInterface } from "node:readline"
+import { GitHubClient, GitLabClient, getRemoteUrl, parseOwnerRepo } from "@pramid/core"
+import type { VcsClient } from "@pramid/core"
 import {
+  type TokenSource,
+  credentialRetrieve,
+  getGitLabHost,
+  isInsideGitRepo,
   readConfig,
   readLocalConfig,
   readMergedConfig,
-  isInsideGitRepo,
-  credentialRetrieve,
   resolveGitHubUser,
   resolveGitLabUser,
-  getGitLabHost,
-  type TokenSource,
 } from "./config.ts"
-import { getRemoteUrl, parseOwnerRepo, GitHubClient, GitLabClient } from "@pramid/core"
-import type { VcsClient } from "@pramid/core"
 
 export function getToken(): string {
-  const envToken = process.env["GITHUB_TOKEN"]
+  const envToken = process.env.GITHUB_TOKEN
   if (envToken) return envToken
 
   // Resolve user (local .git/config → global config.json), then look up credential
@@ -30,12 +30,14 @@ export function getToken(): string {
   if (config.githubToken) return config.githubToken
 
   console.error("Error: No GitHub token found.")
-  console.error("Run `pramid auth --global` to set one up, or set the GITHUB_TOKEN environment variable.")
+  console.error(
+    "Run `pramid auth --global` to set one up, or set the GITHUB_TOKEN environment variable.",
+  )
   process.exit(1)
 }
 
 export function getGitLabToken(): string {
-  const envToken = process.env["GITLAB_TOKEN"]
+  const envToken = process.env.GITLAB_TOKEN
   if (envToken) return envToken
 
   const cwd = process.cwd()
@@ -50,13 +52,15 @@ export function getGitLabToken(): string {
   if (config.gitlabToken) return config.gitlabToken
 
   console.error("Error: No GitLab token found.")
-  console.error("Run `pramid auth --global --gitlab` to set one up, or set the GITLAB_TOKEN environment variable.")
+  console.error(
+    "Run `pramid auth --global --gitlab` to set one up, or set the GITLAB_TOKEN environment variable.",
+  )
   process.exit(1)
 }
 
 /** Determine where a GitHub token is coming from and which user. */
 export function getGitHubTokenSource(): { source: TokenSource; user?: string } {
-  if (process.env["GITHUB_TOKEN"]) return { source: "env" }
+  if (process.env.GITHUB_TOKEN) return { source: "env" }
   const cwd = process.cwd()
   const user = resolveGitHubUser(cwd)
   if (user) {
@@ -74,7 +78,7 @@ export function getGitHubTokenSource(): { source: TokenSource; user?: string } {
 
 /** Determine where a GitLab token is coming from and which user. */
 export function getGitLabTokenSource(): { source: TokenSource; user?: string } {
-  if (process.env["GITLAB_TOKEN"]) return { source: "env" }
+  if (process.env.GITLAB_TOKEN) return { source: "env" }
   const cwd = process.cwd()
   const host = getGitLabHost(cwd)
   const user = resolveGitLabUser(cwd)
@@ -102,7 +106,8 @@ export async function validateGitLabToken(
         "User-Agent": "pramid/0.0.1",
       },
     })
-    if (resp.status === 401) return { ok: false, error: "Invalid or expired token (401 Unauthorized)" }
+    if (resp.status === 401)
+      return { ok: false, error: "Invalid or expired token (401 Unauthorized)" }
     if (!resp.ok) return { ok: false, error: `GitLab API returned ${resp.status}` }
     const data = (await resp.json()) as { username: string }
     return { ok: true, login: data.username }
@@ -126,7 +131,7 @@ export function detectPlatform(remoteUrl: string): "github" | "gitlab" {
       const configuredHost = new URL(config.gitlabUrl).hostname
       const remoteHost = remoteUrl.includes("://")
         ? new URL(remoteUrl).hostname
-        : remoteUrl.split(":")[0]?.split("@").pop() ?? ""
+        : (remoteUrl.split(":")[0]?.split("@").pop() ?? "")
       if (configuredHost && remoteHost.includes(configuredHost)) return "gitlab"
     } catch {
       // URL parsing failed — fall through to default
@@ -198,7 +203,8 @@ export async function validateToken(
         Accept: "application/vnd.github+json",
       },
     })
-    if (resp.status === 401) return { ok: false, error: "Invalid or expired token (401 Unauthorized)" }
+    if (resp.status === 401)
+      return { ok: false, error: "Invalid or expired token (401 Unauthorized)" }
     if (!resp.ok) return { ok: false, error: `GitHub API returned ${resp.status}` }
     const data = (await resp.json()) as { login: string }
     const scopes = resp.headers.get("x-oauth-scopes")
@@ -209,20 +215,27 @@ export async function validateToken(
 }
 
 /** Resolve owner/repo from --repo flag, or auto-detect from the git remote. */
-export function resolveRepo(repoFlag: string | undefined, remote: string): { owner: string; repo: string } {
+export function resolveRepo(
+  repoFlag: string | undefined,
+  remote: string,
+): { owner: string; repo: string } {
   if (repoFlag) return parseRepoSlug(repoFlag)
 
   let url: string
   try {
     url = getRemoteUrl(remote, process.cwd())
   } catch {
-    console.error(`Error: Could not read git remote "${remote}". Run from inside the repo or use --repo <owner/repo>.`)
+    console.error(
+      `Error: Could not read git remote "${remote}". Run from inside the repo or use --repo <owner/repo>.`,
+    )
     process.exit(1)
   }
 
   const slug = parseOwnerRepo(url)
   if (!slug) {
-    console.error(`Error: Could not parse owner/repo from remote URL "${url}". Use --repo <owner/repo>.`)
+    console.error(
+      `Error: Could not parse owner/repo from remote URL "${url}". Use --repo <owner/repo>.`,
+    )
     process.exit(1)
   }
 
@@ -254,10 +267,10 @@ export function printRebaseFailure(
     if (commandName) {
       console.log(`  git add . && pramid stack ${commandName} --continue`)
     } else {
-      console.log(`  git add . && git rebase --continue`)
+      console.log("  git add . && git rebase --continue")
       console.log(`  git push --force-with-lease ${remote} ${conflict.pr.headBranch}`)
       if (skipped.length > 0) {
-        console.log(`  pramid stack restack ${skipped[0]!.headBranch}`)
+        console.log(`  pramid stack restack ${skipped[0]?.headBranch}`)
       }
     }
   }

@@ -1,5 +1,12 @@
-import type { VcsClient, RepoRef, MergeStrategy, RebaseResult, CreatePRParams } from "./vcs-client.ts"
-import type { PullRequest, CiStatus, ReviewStatus } from "../graph/graph.ts"
+import type { CiStatus, PullRequest, ReviewStatus } from "../graph/graph.ts"
+import { sleep } from "../utils.ts"
+import type {
+  CreatePRParams,
+  MergeStrategy,
+  RebaseResult,
+  RepoRef,
+  VcsClient,
+} from "./vcs-client.ts"
 
 // ─── PrId helpers ─────────────────────────────────────────────────────────────
 
@@ -9,7 +16,7 @@ function parsePrId(prId: string): { projectPath: string; iid: number } {
   if (!match) {
     throw new Error(`Invalid GitLab PrId: "${prId}". Expected "gitlab:owner/repo#number".`)
   }
-  return { projectPath: match[1]!, iid: Number(match[2]) }
+  return { projectPath: match[1] as string, iid: Number(match[2]) }
 }
 
 function makePrId(projectPath: string, iid: number): string {
@@ -68,7 +75,7 @@ interface GitLabApprovals {
 
 function mapCiStatus(pipelines: GitLabPipeline[]): CiStatus {
   if (pipelines.length === 0) return "none"
-  const latest = pipelines[0]!
+  const latest = pipelines[0] as GitLabPipeline
   switch (latest.status) {
     case "success":
       return "success"
@@ -95,7 +102,12 @@ function isDraft(mr: GitLabMR): boolean {
   return mr.draft || mr.title.startsWith("Draft:") || mr.title.startsWith("WIP:")
 }
 
-function mrToPullRequest(mr: GitLabMR, projectPath: string, ciStatus: CiStatus, reviewStatus: ReviewStatus): PullRequest {
+function mrToPullRequest(
+  mr: GitLabMR,
+  projectPath: string,
+  ciStatus: CiStatus,
+  reviewStatus: ReviewStatus,
+): PullRequest {
   return {
     id: makePrId(projectPath, mr.iid),
     platform: "gitlab",
@@ -126,10 +138,6 @@ function getRateLimitWaitMs(resp: Response): number | null {
     return 60_000
   }
   return null
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // ─── GitLabClient ─────────────────────────────────────────────────────────────
@@ -244,9 +252,9 @@ export class GitLabClient implements VcsClient {
       this.#json<GitLabPipeline[]>(
         `/projects/${encoded}/merge_requests/${iid}/pipelines?per_page=1`,
       ).catch(() => [] as GitLabPipeline[]),
-      this.#json<GitLabApprovals>(
-        `/projects/${encoded}/merge_requests/${iid}/approvals`,
-      ).catch(() => ({ approved: false })),
+      this.#json<GitLabApprovals>(`/projects/${encoded}/merge_requests/${iid}/approvals`).catch(
+        () => ({ approved: false }),
+      ),
     ])
 
     const ciStatus = mapCiStatus(pipelines)
@@ -308,9 +316,7 @@ export class GitLabClient implements VcsClient {
       const text = await resp.text().catch(() => "")
       if (resp.status === 405 && strategy === "squash") {
         throw new Error(
-          `GitLab rejected squash merge for MR !${iid} (405). ` +
-          `This usually means the branch is not up-to-date with its target. ` +
-          `Run \`pramid stack sync\` to rebase the stack onto the latest trunk, then retry.`,
+          `GitLab rejected squash merge for MR !${iid} (405). This usually means the branch is not up-to-date with its target. Run \`pramid stack sync\` to rebase the stack onto the latest trunk, then retry.`,
         )
       }
       throw new Error(`GitLab API ${resp.status} for /merge: ${text}`)
@@ -351,7 +357,10 @@ export class GitLabClient implements VcsClient {
     })
     if (!triggerResp.ok) {
       const body = await triggerResp.text().catch(() => "")
-      return { success: false, errorMessage: `Rebase trigger failed (${triggerResp.status}): ${body}` }
+      return {
+        success: false,
+        errorMessage: `Rebase trigger failed (${triggerResp.status}): ${body}`,
+      }
     }
 
     // Poll until rebase_in_progress is false (max 30 polls × 2 s = 60 s)

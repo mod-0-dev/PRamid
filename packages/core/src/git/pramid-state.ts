@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { branchExists, remoteBranchExists } from "./git-ops.ts"
 
@@ -22,7 +22,7 @@ function readState(cwd: string): PramidState {
 
 function writeState(cwd: string, state: PramidState): void {
   mkdirSync(join(cwd, ".git", "pramid"), { recursive: true })
-  writeFileSync(statePath(cwd), JSON.stringify(state, null, 2) + "\n", "utf8")
+  writeFileSync(statePath(cwd), `${JSON.stringify(state, null, 2)}\n`, "utf8")
 }
 
 /** Record that `branch` is stacked on `parent`. */

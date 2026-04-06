@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import type { PullRequest } from "../graph/graph.ts"
 import { GitLabClient } from "./gitlab-client.ts"
 import type { RepoRef } from "./vcs-client.ts"
 
@@ -57,7 +58,7 @@ function jsonResp(body: unknown, status = 200, headers: Record<string, string> =
 function makeFetch(routes: FetchRoute[]): (url: string, init?: RequestInit) => Promise<Response> {
   let call = 0
   return async (url: string, init?: RequestInit) => {
-    const route = routes[call] ?? routes[routes.length - 1]!
+    const route = routes[call] ?? routes.at(-1)
     call++
     return route(url, init)
   }
@@ -71,17 +72,17 @@ describe("GitLabClient.listOpenPRs", () => {
     // Then 2 MRs × (1 pipeline call + 1 approvals call) = 4 more calls
     const fetch = makeFetch([
       () => jsonResp([MR_1, MR_2], 200, { "x-next-page": "" }),
-      () => jsonResp(PIPELINE_SUCCESS),              // MR_1 pipelines
-      () => jsonResp(APPROVALS_APPROVED),            // MR_1 approvals
-      () => jsonResp([]),                            // MR_2 pipelines (empty)
-      () => jsonResp(APPROVALS_NONE),                // MR_2 approvals
+      () => jsonResp(PIPELINE_SUCCESS), // MR_1 pipelines
+      () => jsonResp(APPROVALS_APPROVED), // MR_1 approvals
+      () => jsonResp([]), // MR_2 pipelines (empty)
+      () => jsonResp(APPROVALS_NONE), // MR_2 approvals
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     const prs = await client.listOpenPRs(REPO)
 
     expect(prs).toHaveLength(2)
 
-    const pr1 = prs[0]!
+    const pr1 = prs[0] as PullRequest
     expect(pr1.id).toBe(`gitlab:${PROJECT_PATH}#1`)
     expect(pr1.platform).toBe("gitlab")
     expect(pr1.number).toBe(1)
@@ -96,7 +97,7 @@ describe("GitLabClient.listOpenPRs", () => {
     expect(pr1.draft).toBe(false)
     expect(pr1.merged).toBe(false)
 
-    const pr2 = prs[1]!
+    const pr2 = prs[1] as PullRequest
     expect(pr2.ciStatus).toBe("none")
     expect(pr2.reviewStatus).toBe("none")
     expect(pr2.mergeable).toBeNull()
@@ -107,18 +108,18 @@ describe("GitLabClient.listOpenPRs", () => {
     const fetch = makeFetch([
       // Page 1 returns MR_1, next page = 2
       () => jsonResp([MR_1], 200, { "x-next-page": "2" }),
-      () => jsonResp([]),            // MR_1 pipelines
+      () => jsonResp([]), // MR_1 pipelines
       () => jsonResp(APPROVALS_NONE), // MR_1 approvals
       // Page 2 returns MR_2, no next page
       () => jsonResp([MR_2], 200, { "x-next-page": "" }),
-      () => jsonResp([]),            // MR_2 pipelines
+      () => jsonResp([]), // MR_2 pipelines
       () => jsonResp(APPROVALS_NONE), // MR_2 approvals
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     const prs = await client.listOpenPRs(REPO)
     expect(prs).toHaveLength(2)
-    expect(prs[0]!.number).toBe(1)
-    expect(prs[1]!.number).toBe(2)
+    expect(prs[0]?.number).toBe(1)
+    expect(prs[1]?.number).toBe(2)
   })
 
   test("maps pipeline statuses correctly", async () => {
@@ -129,7 +130,7 @@ describe("GitLabClient.listOpenPRs", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     const prs = await client.listOpenPRs(REPO)
-    expect(prs[0]!.ciStatus).toBe("failure")
+    expect(prs[0]?.ciStatus).toBe("failure")
   })
 
   test("maps running pipeline to pending", async () => {
@@ -140,7 +141,7 @@ describe("GitLabClient.listOpenPRs", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     const prs = await client.listOpenPRs(REPO)
-    expect(prs[0]!.ciStatus).toBe("pending")
+    expect(prs[0]?.ciStatus).toBe("pending")
   })
 })
 
@@ -181,8 +182,8 @@ describe("GitLabClient.createPR", () => {
     const pr = await client.createPR(REPO, { head: "feature", base: "main", title: "Add feature" })
     expect(pr.number).toBe(5)
     expect(pr.headBranch).toBe("feature")
-    expect((capturedBody as Record<string, unknown>)["source_branch"]).toBe("feature")
-    expect((capturedBody as Record<string, unknown>)["target_branch"]).toBe("main")
+    expect((capturedBody as Record<string, unknown>).source_branch).toBe("feature")
+    expect((capturedBody as Record<string, unknown>).target_branch).toBe("main")
   })
 
   test("prefixes title with Draft: for draft PRs", async () => {
@@ -195,7 +196,7 @@ describe("GitLabClient.createPR", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.createPR(REPO, { head: "feat", base: "main", title: "My MR", draft: true })
-    expect((capturedBody as Record<string, unknown>)["title"]).toBe("Draft: My MR")
+    expect((capturedBody as Record<string, unknown>).title).toBe("Draft: My MR")
   })
 })
 
@@ -212,7 +213,7 @@ describe("GitLabClient.updateBaseBranch", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.updateBaseBranch(`gitlab:${PROJECT_PATH}#1`, "develop")
-    expect((capturedBody as Record<string, unknown>)["target_branch"]).toBe("develop")
+    expect((capturedBody as Record<string, unknown>).target_branch).toBe("develop")
   })
 })
 
@@ -229,7 +230,7 @@ describe("GitLabClient.mergePR", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.mergePR(`gitlab:${PROJECT_PATH}#1`, "merge")
-    expect((capturedBody as Record<string, unknown>)["squash"]).toBe(false)
+    expect((capturedBody as Record<string, unknown>).squash).toBe(false)
   })
 
   test("squash strategy → squash: true", async () => {
@@ -242,7 +243,7 @@ describe("GitLabClient.mergePR", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.mergePR(`gitlab:${PROJECT_PATH}#1`, "squash")
-    expect((capturedBody as Record<string, unknown>)["squash"]).toBe(true)
+    expect((capturedBody as Record<string, unknown>).squash).toBe(true)
   })
 })
 
@@ -259,7 +260,7 @@ describe("GitLabClient.closePR", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.closePR(`gitlab:${PROJECT_PATH}#1`)
-    expect((capturedBody as Record<string, unknown>)["state_event"]).toBe("close")
+    expect((capturedBody as Record<string, unknown>).state_event).toBe("close")
   })
 })
 
@@ -276,7 +277,7 @@ describe("GitLabClient.updatePRBody", () => {
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
     await client.updatePRBody(`gitlab:${PROJECT_PATH}#1`, "new body")
-    expect((capturedBody as Record<string, unknown>)["description"]).toBe("new body")
+    expect((capturedBody as Record<string, unknown>).description).toBe("new body")
   })
 })
 
@@ -285,7 +286,7 @@ describe("GitLabClient.updatePRBody", () => {
 describe("GitLabClient.rebaseBranch", () => {
   test("returns success when rebase completes on first poll", async () => {
     const fetch = makeFetch([
-      () => jsonResp({ rebase_in_progress: true }),   // POST rebase trigger
+      () => jsonResp({ rebase_in_progress: true }), // POST rebase trigger
       () => jsonResp({ ...MR_1, rebase_in_progress: false, merge_error: null }), // poll 1
     ])
     // Inject a fast sleep by patching global setTimeout — easier: just use real client
@@ -302,7 +303,7 @@ describe("GitLabClient.rebaseBranch", () => {
 
   test("returns failure when merge_error is set after rebase", async () => {
     const fetch = makeFetch([
-      () => jsonResp({ rebase_in_progress: true }),   // POST trigger
+      () => jsonResp({ rebase_in_progress: true }), // POST trigger
       () => jsonResp({ ...MR_1, rebase_in_progress: false, merge_error: "Conflict in file.ts" }),
     ])
     const client = new GitLabClient("tok", { _fetch: fetch })
@@ -312,9 +313,7 @@ describe("GitLabClient.rebaseBranch", () => {
   }, 10_000)
 
   test("returns failure when trigger endpoint errors", async () => {
-    const fetch = makeFetch([
-      () => new Response("Forbidden", { status: 403 }),
-    ])
+    const fetch = makeFetch([() => new Response("Forbidden", { status: 403 })])
     const client = new GitLabClient("tok", { _fetch: fetch })
     const result = await client.rebaseBranch(`gitlab:${PROJECT_PATH}#1`)
     expect(result.success).toBe(false)
@@ -384,6 +383,8 @@ describe("GitLabClient rate-limit retry", () => {
 describe("GitLabClient.forcePush", () => {
   test("throws not-implemented error", async () => {
     const client = new GitLabClient("tok", { _fetch: makeFetch([]) })
-    await expect(client.forcePush("branch", "sha")).rejects.toThrow("forcePush is a local git operation")
+    await expect(client.forcePush("branch", "sha")).rejects.toThrow(
+      "forcePush is a local git operation",
+    )
   })
 })

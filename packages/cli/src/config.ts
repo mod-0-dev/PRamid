@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
-import { join } from "path"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 
 export interface PramidConfig {
   githubToken?: string
@@ -16,10 +16,11 @@ export interface PramidConfig {
 
 function configDir(): string {
   if (process.platform === "win32") {
-    const appData = process.env["APPDATA"] ?? join(process.env["USERPROFILE"] ?? "~", "AppData", "Roaming")
+    const appData =
+      process.env.APPDATA ?? join(process.env.USERPROFILE ?? "~", "AppData", "Roaming")
     return join(appData, "pramid")
   }
-  const xdgBase = process.env["XDG_CONFIG_HOME"] ?? join(process.env["HOME"] ?? "~", ".config")
+  const xdgBase = process.env.XDG_CONFIG_HOME ?? join(process.env.HOME ?? "~", ".config")
   return join(xdgBase, "pramid")
 }
 
@@ -42,7 +43,7 @@ export function writeConfig(config: PramidConfig): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
-  writeFileSync(configPath(), JSON.stringify(config, null, 2) + "\n", "utf8")
+  writeFileSync(configPath(), `${JSON.stringify(config, null, 2)}\n`, "utf8")
 }
 
 // ─── Local config (git config --local) ───────────────────────────────────────
@@ -195,7 +196,9 @@ export function getGitLabHost(cwd?: string): string {
   if (config.gitlabUrl) {
     try {
       return new URL(config.gitlabUrl).hostname
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
   return "gitlab.com"
 }

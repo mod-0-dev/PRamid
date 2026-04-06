@@ -1,44 +1,41 @@
 #!/usr/bin/env bun
-import { Command } from "commander"
-import {
-  readConfig,
-  writeConfig,
-  configPath,
-  readLocalConfig,
-  writeLocalConfig,
-  readMergedConfig,
-  isInsideGitRepo,
-  hasCredentialHelper,
-  credentialRetrieve,
-  credentialStore,
-  credentialErase,
-  resolveGitHubUser,
-  resolveGitLabUser,
-  getGitLabHost,
-} from "./config.ts"
 import { formatStatus } from "@pramid/core"
 import { startServer } from "@pramid/server"
+import { Command } from "commander"
+import { buildBranchCommand, registerPushCommand } from "./commands/branch.ts"
+import { buildStackCommand } from "./commands/stack.ts"
 import {
-  getToken,
-  getGitLabToken,
+  configPath,
+  credentialErase,
+  credentialRetrieve,
+  credentialStore,
+  getGitLabHost,
+  hasCredentialHelper,
+  isInsideGitRepo,
+  readConfig,
+  readLocalConfig,
+  readMergedConfig,
+  resolveGitHubUser,
+  resolveGitLabUser,
+  writeConfig,
+  writeLocalConfig,
+} from "./config.ts"
+import {
   getGitHubTokenSource,
+  getGitLabToken,
   getGitLabTokenSource,
-  resolveRepo,
-  resolveClient,
+  getToken,
   openBrowser,
   prompt,
-  validateToken,
+  resolveClient,
+  resolveRepo,
   validateGitLabToken,
+  validateToken,
 } from "./utils.ts"
-import { buildStackCommand } from "./commands/stack.ts"
-import { buildBranchCommand, registerPushCommand } from "./commands/branch.ts"
 
 const program = new Command()
 
-program
-  .name("pramid")
-  .description("PR stack management tool")
-  .version("0.0.1")
+program.name("pramid").description("PR stack management tool").version("0.0.1")
 
 program
   .command("status")
@@ -74,7 +71,9 @@ const authCmd = program
 
     if (!useGlobal && !inRepo) {
       console.error("Error: Not inside a git repository.")
-      console.error("Use --global to set a default user for all repos, or run from inside a git repo.")
+      console.error(
+        "Use --global to set a default user for all repos, or run from inside a git repo.",
+      )
       process.exit(1)
     }
 
@@ -88,22 +87,32 @@ const authCmd = program
 
     if (opts.gitlab) {
       // ── GitLab flow ─────────────────────────────────────────────────────────
-      const envToken = process.env["GITLAB_TOKEN"]
+      const envToken = process.env.GITLAB_TOKEN
       if (envToken) {
-        console.log("Note: GITLAB_TOKEN is set in the environment and will always take priority over a stored token.")
+        console.log(
+          "Note: GITLAB_TOKEN is set in the environment and will always take priority over a stored token.",
+        )
         console.log("Unset it first if you want the stored token to be used.\n")
       }
 
       // Check for an existing token at the target level
       const host = getGitLabHost(cwd)
       const existingUser = useGlobal ? readConfig().gitlabUser : resolveGitLabUser(cwd)
-      const existingToken = existingUser && hasCred
-        ? credentialRetrieve(host, existingUser)
-        : (useGlobal ? readConfig().gitlabToken : readMergedConfig(cwd).gitlabToken)
+      const existingToken =
+        existingUser && hasCred
+          ? credentialRetrieve(host, existingUser)
+          : useGlobal
+            ? readConfig().gitlabToken
+            : readMergedConfig(cwd).gitlabToken
       const existingUrl = readMergedConfig(cwd).gitlabUrl
 
       if (existingToken) {
-        const storageLabel = existingUser && hasCred ? `credential helper (${existingUser})` : useGlobal ? "global config" : "local config"
+        const storageLabel =
+          existingUser && hasCred
+            ? `credential helper (${existingUser})`
+            : useGlobal
+              ? "global config"
+              : "local config"
         console.log(`Validating existing ${storageLabel} GitLab token...`)
         const baseUrl = existingUrl ? `${existingUrl}/api/v4` : "https://gitlab.com/api/v4"
         const existing = await validateGitLabToken(existingToken, baseUrl)
@@ -122,7 +131,9 @@ const authCmd = program
 
       console.log("Create a Personal Access Token with 'api' scope:")
       console.log()
-      console.log("  https://gitlab.com/-/user_settings/personal_access_tokens?name=PRamid&scopes=api")
+      console.log(
+        "  https://gitlab.com/-/user_settings/personal_access_tokens?name=PRamid&scopes=api",
+      )
       console.log()
 
       const token = await prompt("Paste your GitLab token: ")
@@ -157,35 +168,55 @@ const authCmd = program
           console.log(`\nToken saved to credential store. Default GitLab user set to: ${login}`)
         } else {
           writeLocalConfig({ gitlabUser: login, ...(gitlabUrl ? { gitlabUrl } : {}) }, cwd)
-          console.log(`\nToken saved to credential store. GitLab user for this repo set to: ${login}`)
+          console.log(
+            `\nToken saved to credential store. GitLab user for this repo set to: ${login}`,
+          )
         }
       } else {
         // No credential helper — fall back to plaintext
         if (useGlobal) {
-          writeConfig({ ...readConfig(), gitlabToken: token, gitlabUser: login, ...(gitlabUrl ? { gitlabUrl } : {}) })
+          writeConfig({
+            ...readConfig(),
+            gitlabToken: token,
+            gitlabUser: login,
+            ...(gitlabUrl ? { gitlabUrl } : {}),
+          })
           console.log(`\nToken saved to ${configPath()} (plaintext)`)
         } else {
-          writeLocalConfig({ gitlabToken: token, gitlabUser: login, ...(gitlabUrl ? { gitlabUrl } : {}) }, cwd)
-          console.log(`\nToken saved to local git config (.git/config, plaintext)`)
+          writeLocalConfig(
+            { gitlabToken: token, gitlabUser: login, ...(gitlabUrl ? { gitlabUrl } : {}) },
+            cwd,
+          )
+          console.log("\nToken saved to local git config (.git/config, plaintext)")
         }
       }
       return
     }
 
     // ── GitHub flow ───────────────────────────────────────────────────────────
-    const envToken = process.env["GITHUB_TOKEN"]
+    const envToken = process.env.GITHUB_TOKEN
     if (envToken) {
-      console.log("Note: GITHUB_TOKEN is set in the environment and will always take priority over a stored token.")
+      console.log(
+        "Note: GITHUB_TOKEN is set in the environment and will always take priority over a stored token.",
+      )
       console.log("Unset it first if you want the stored token to be used.\n")
     }
 
     const existingUser = useGlobal ? readConfig().githubUser : resolveGitHubUser(cwd)
-    const existingToken = existingUser && hasCred
-      ? credentialRetrieve("github.com", existingUser)
-      : (useGlobal ? readConfig().githubToken : readMergedConfig(cwd).githubToken)
+    const existingToken =
+      existingUser && hasCred
+        ? credentialRetrieve("github.com", existingUser)
+        : useGlobal
+          ? readConfig().githubToken
+          : readMergedConfig(cwd).githubToken
 
     if (existingToken) {
-      const storageLabel = existingUser && hasCred ? `credential helper (${existingUser})` : useGlobal ? "global config" : "local config"
+      const storageLabel =
+        existingUser && hasCred
+          ? `credential helper (${existingUser})`
+          : useGlobal
+            ? "global config"
+            : "local config"
       console.log(`Validating existing ${storageLabel} token...`)
       const existing = await validateToken(existingToken)
       if (existing.ok) {
@@ -252,7 +283,7 @@ const authCmd = program
         console.log(`\nToken saved to ${configPath()} (plaintext)`)
       } else {
         writeLocalConfig({ githubToken: token, githubUser: login }, cwd)
-        console.log(`\nToken saved to local git config (.git/config, plaintext)`)
+        console.log("\nToken saved to local git config (.git/config, plaintext)")
       }
     }
   })
@@ -268,11 +299,16 @@ authCmd
     const sourceLabel = (s: string, user?: string) => {
       const base = (() => {
         switch (s) {
-          case "env": return "env var"
-          case "credential": return "credential helper"
-          case "local": return "local git config"
-          case "global": return "global config"
-          default: return ""
+          case "env":
+            return "env var"
+          case "credential":
+            return "credential helper"
+          case "local":
+            return "local git config"
+          case "global":
+            return "global config"
+          default:
+            return ""
         }
       })()
       return user ? `${base}, user: ${user}` : base
@@ -281,14 +317,17 @@ authCmd
     // ── GitHub ────────────────────────────────────────────────────────────────
     if (gh.source !== "none") {
       let token: string | undefined
-      if (gh.source === "env") token = process.env["GITHUB_TOKEN"]
-      else if (gh.source === "credential" && gh.user) token = credentialRetrieve("github.com", gh.user) ?? undefined
+      if (gh.source === "env") token = process.env.GITHUB_TOKEN
+      else if (gh.source === "credential" && gh.user)
+        token = credentialRetrieve("github.com", gh.user) ?? undefined
       else token = readMergedConfig(cwd).githubToken
 
       if (token) {
         const result = await validateToken(token)
         const label = sourceLabel(gh.source, gh.user)
-        console.log(`GitHub:  ${result.ok ? `authenticated as ${result.login}` : `token invalid — ${result.error}`}  (${label})`)
+        console.log(
+          `GitHub:  ${result.ok ? `authenticated as ${result.login}` : `token invalid — ${result.error}`}  (${label})`,
+        )
       }
     } else {
       console.log("GitHub:  no token  →  run `pramid auth --global` to set one up")
@@ -301,14 +340,17 @@ authCmd
     const instanceLabel = config.gitlabUrl ? ` (${config.gitlabUrl})` : ""
     if (gl.source !== "none") {
       let token: string | undefined
-      if (gl.source === "env") token = process.env["GITLAB_TOKEN"]
-      else if (gl.source === "credential" && gl.user) token = credentialRetrieve(host, gl.user) ?? undefined
+      if (gl.source === "env") token = process.env.GITLAB_TOKEN
+      else if (gl.source === "credential" && gl.user)
+        token = credentialRetrieve(host, gl.user) ?? undefined
       else token = config.gitlabToken
 
       if (token) {
         const result = await validateGitLabToken(token, baseUrl)
         const label = sourceLabel(gl.source, gl.user)
-        console.log(`GitLab:  ${result.ok ? `authenticated as ${result.login}` : `token invalid — ${result.error}`}  (${label})${instanceLabel}`)
+        console.log(
+          `GitLab:  ${result.ok ? `authenticated as ${result.login}` : `token invalid — ${result.error}`}  (${label})${instanceLabel}`,
+        )
       }
     } else {
       console.log("GitLab:  no token  →  run `pramid auth --global --gitlab` to set one up")
@@ -348,7 +390,14 @@ program
     openBrowser(url)
 
     try {
-      await startServer({ repo, client, port, remote: opts.remote, cwd: process.cwd(), assets: { html, js, css } })
+      await startServer({
+        repo,
+        client,
+        port,
+        remote: opts.remote,
+        cwd: process.cwd(),
+        assets: { html, js, css },
+      })
     } catch (err) {
       console.error("Error:", (err as Error).message)
       process.exit(1)

@@ -1,7 +1,7 @@
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { getChildren } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getChildren } from "../graph/dag.ts"
 
 export interface CloseParams {
   repo: RepoRef

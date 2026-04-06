@@ -1,8 +1,8 @@
 import "./style.css"
-import { setupGraph, cy } from "./graph"
-import { setupFilterControls } from "./filters"
-import { setupStacksView } from "./stacks"
 import { fetchAndRender, setupBranchSelect } from "./api"
+import { setupFilterControls } from "./filters"
+import { cy, setupGraph } from "./graph"
+import { setupStacksView } from "./stacks"
 
 // ─── View navigation ──────────────────────────────────────────────────────────
 
@@ -10,18 +10,18 @@ function setupNav(): void {
   const tabs = document.querySelectorAll<HTMLButtonElement>(".nav-tab")
   const views = document.querySelectorAll<HTMLElement>(".view")
 
-  tabs.forEach((tab) => {
+  for (const tab of tabs) {
     tab.addEventListener("click", () => {
-      const target = tab.dataset["view"]!
-      tabs.forEach((t) => t.classList.toggle("active", t.dataset["view"] === target))
-      views.forEach((v) => v.classList.toggle("hidden", v.id !== target))
+      const target = tab.dataset.view as string
+      for (const t of tabs) t.classList.toggle("active", t.dataset.view === target)
+      for (const v of views) v.classList.toggle("hidden", v.id !== target)
 
       if (target === "view-graph") {
         cy.resize()
         cy.fit()
       }
     })
-  })
+  }
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────

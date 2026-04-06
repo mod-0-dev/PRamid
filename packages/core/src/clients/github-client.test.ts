@@ -1,4 +1,5 @@
-import { describe, expect, test, mock, beforeEach } from "bun:test"
+import { beforeEach, describe, expect, mock, test } from "bun:test"
+import type { PullRequest } from "../graph/graph.ts"
 import { GitHubClient } from "./github-client.ts"
 import type { RepoRef } from "./vcs-client.ts"
 
@@ -36,10 +37,12 @@ const PR_NODE_2 = {
   mergeable: "CONFLICTING" as const,
 }
 
-function makeGqlMock(pages: { nodes: unknown[]; hasNextPage: boolean; endCursor: string | null }[]) {
+function makeGqlMock(
+  pages: { nodes: unknown[]; hasNextPage: boolean; endCursor: string | null }[],
+) {
   let call = 0
   return mock((_query: string, _vars?: Record<string, unknown>) => {
-    const page = pages[call++] ?? pages[pages.length - 1]!
+    const page = pages[call++] ?? pages.at(-1)
     const query = _query.trim()
     if (query.startsWith("query ListOpenPRs")) {
       return Promise.resolve({
@@ -76,14 +79,16 @@ function makeOctokitMock(overrides: Record<string, unknown> = {}) {
 
 describe("GitHubClient.listOpenPRs", () => {
   test("maps GraphQL nodes to PullRequest objects", async () => {
-    const gql = makeGqlMock([{ nodes: [PR_NODE_1, PR_NODE_2], hasNextPage: false, endCursor: null }])
+    const gql = makeGqlMock([
+      { nodes: [PR_NODE_1, PR_NODE_2], hasNextPage: false, endCursor: null },
+    ])
     const client = new GitHubClient("tok", { _graphql: gql, _octokit: makeOctokitMock() as never })
 
     const prs = await client.listOpenPRs(REPO)
 
     expect(prs).toHaveLength(2)
 
-    const pr1 = prs[0]!
+    const pr1 = prs[0] as PullRequest
     expect(pr1.id).toBe("github:acme/app#1")
     expect(pr1.platform).toBe("github")
     expect(pr1.number).toBe(1)
@@ -96,7 +101,7 @@ describe("GitHubClient.listOpenPRs", () => {
     expect(pr1.draft).toBe(false)
     expect(pr1.merged).toBe(false)
 
-    const pr2 = prs[1]!
+    const pr2 = prs[1] as PullRequest
     expect(pr2.id).toBe("github:acme/app#2")
     expect(pr2.ciStatus).toBe("pending")
     expect(pr2.reviewStatus).toBe("none")
@@ -116,7 +121,7 @@ describe("GitHubClient.listOpenPRs", () => {
     expect(prs).toHaveLength(2)
     expect(gql).toHaveBeenCalledTimes(2)
     // Second call should pass cursor
-    expect((gql.mock.calls[1] as [string, Record<string, unknown>])[1]?.["cursor"]).toBe("cursor1")
+    expect((gql.mock.calls[1] as [string, Record<string, unknown>])[1]?.cursor).toBe("cursor1")
   })
 
   test("maps CI failure states", async () => {
@@ -125,7 +130,7 @@ describe("GitHubClient.listOpenPRs", () => {
     const client = new GitHubClient("tok", { _graphql: gql, _octokit: makeOctokitMock() as never })
 
     const [pr] = await client.listOpenPRs(REPO)
-    expect(pr!.ciStatus).toBe("failure")
+    expect(pr?.ciStatus).toBe("failure")
   })
 
   test("maps null statusCheckRollup to 'none'", async () => {
@@ -134,7 +139,7 @@ describe("GitHubClient.listOpenPRs", () => {
     const client = new GitHubClient("tok", { _graphql: gql, _octokit: makeOctokitMock() as never })
 
     const [pr] = await client.listOpenPRs(REPO)
-    expect(pr!.ciStatus).toBe("none")
+    expect(pr?.ciStatus).toBe("none")
   })
 
   test("maps CHANGES_REQUESTED review decision", async () => {
@@ -143,7 +148,7 @@ describe("GitHubClient.listOpenPRs", () => {
     const client = new GitHubClient("tok", { _graphql: gql, _octokit: makeOctokitMock() as never })
 
     const [pr] = await client.listOpenPRs(REPO)
-    expect(pr!.reviewStatus).toBe("changes_requested")
+    expect(pr?.reviewStatus).toBe("changes_requested")
   })
 })
 
@@ -164,7 +169,10 @@ describe("GitHubClient.getPR", () => {
     const nullGql = mock((_query: string, _vars?: Record<string, unknown>) =>
       Promise.resolve({ repository: { pullRequest: null } }),
     )
-    const client = new GitHubClient("tok", { _graphql: nullGql, _octokit: makeOctokitMock() as never })
+    const client = new GitHubClient("tok", {
+      _graphql: nullGql,
+      _octokit: makeOctokitMock() as never,
+    })
 
     await expect(client.getPR("github:acme/app#999")).rejects.toThrow("PR not found")
   })

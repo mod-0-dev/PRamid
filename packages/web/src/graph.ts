@@ -1,23 +1,22 @@
-import cytoscape from "cytoscape";
+import cytoscape from "cytoscape"
 // @ts-expect-error — no bundled types for cytoscape-dagre
-import dagre from "cytoscape-dagre";
-import type { ApiPR } from "./types";
-import { showToast } from "./toast";
-import { postAction, handleConflict, type ActionResponse } from "./api-actions";
+import dagre from "cytoscape-dagre"
+import { type ActionResponse, handleConflict, postAction } from "./api-actions"
+import { showToast } from "./toast"
+import type { ApiPR } from "./types"
 
-cytoscape.use(dagre);
+cytoscape.use(dagre)
 
 // ─── Build Cytoscape elements ─────────────────────────────────────────────────
 
 export function buildElements(prs: ApiPR[]): cytoscape.ElementDefinition[] {
-  const byHead = new Map(prs.map((pr) => [pr.headBranch, pr.id]));
-  const elements: cytoscape.ElementDefinition[] = [];
+  const byHead = new Map(prs.map((pr) => [pr.headBranch, pr.id]))
+  const elements: cytoscape.ElementDefinition[] = []
 
   for (const pr of prs) {
-    const shortTitle = pr.title.length > 30 ? pr.title.slice(0, 27) + "…" : pr.title;
-    const shortBranch =
-      pr.headBranch.length > 28 ? pr.headBranch.slice(0, 25) + "…" : pr.headBranch;
-    const draft = pr.draft ? " [draft]" : "";
+    const shortTitle = pr.title.length > 30 ? `${pr.title.slice(0, 27)}…` : pr.title
+    const shortBranch = pr.headBranch.length > 28 ? `${pr.headBranch.slice(0, 25)}…` : pr.headBranch
+    const draft = pr.draft ? " [draft]" : ""
     elements.push({
       data: {
         id: pr.id,
@@ -34,11 +33,11 @@ export function buildElements(prs: ApiPR[]): cytoscape.ElementDefinition[] {
         stale: pr.stale,
         draft: pr.draft,
       },
-    });
+    })
   }
 
   for (const pr of prs) {
-    const parentId = byHead.get(pr.baseBranch);
+    const parentId = byHead.get(pr.baseBranch)
     if (parentId) {
       elements.push({
         data: {
@@ -47,17 +46,17 @@ export function buildElements(prs: ApiPR[]): cytoscape.ElementDefinition[] {
           target: pr.id,
           stale: pr.stale,
         },
-      });
+      })
     }
   }
 
-  return elements;
+  return elements
 }
 
 // ─── Cytoscape instance ───────────────────────────────────────────────────────
 
 // Cytoscape's bundled types are incomplete (missing shadow-*, rgba colours, etc.).
-type CyStyle = cytoscape.StylesheetCSS[];
+type CyStyle = cytoscape.StylesheetCSS[]
 
 export const cy = cytoscape({
   container: document.getElementById("cy"),
@@ -160,14 +159,14 @@ export const cy = cytoscape({
       },
     },
   ] as unknown as CyStyle,
-});
+})
 
 // ─── Current-branch highlight ─────────────────────────────────────────────────
 
 export function highlightCurrentBranch(branch: string): void {
-  cy.nodes().removeClass("current-branch");
+  cy.nodes().removeClass("current-branch")
   if (branch) {
-    cy.nodes(`[headBranch = "${branch}"]`).addClass("current-branch");
+    cy.nodes(`[headBranch = "${branch}"]`).addClass("current-branch")
   }
 }
 
@@ -178,95 +177,95 @@ const CI_TEXT: Record<string, string> = {
   failure: "✗ failure",
   pending: "… pending",
   none: "· none",
-};
+}
 const REVIEW_TEXT: Record<string, string> = {
   approved: "approved",
   changes_requested: "changes needed",
   pending: "review pending",
   none: "no review",
-};
+}
 
 function showTooltip(node: cytoscape.NodeSingular, container: HTMLElement): void {
-  const tooltip = document.getElementById("tooltip")!;
+  const tooltip = document.getElementById("tooltip") as HTMLElement
 
-  const number: number = node.data("number");
-  const title: string = node.data("title");
-  const author: string = node.data("author") || "";
-  const ciStatus: string = node.data("ciStatus") || "none";
-  const reviewStatus: string = node.data("reviewStatus") || "none";
-  const stale: boolean = node.data("stale");
-  const draft: boolean = node.data("draft");
-  (tooltip.querySelector(".tt-number") as HTMLElement).textContent = `#${number}`;
+  const number: number = node.data("number")
+  const title: string = node.data("title")
+  const author: string = node.data("author") || ""
+  const ciStatus: string = node.data("ciStatus") || "none"
+  const reviewStatus: string = node.data("reviewStatus") || "none"
+  const stale: boolean = node.data("stale")
+  const draft: boolean = node.data("draft")
+  ;(tooltip.querySelector(".tt-number") as HTMLElement).textContent = `#${number}`
 
-  const draftTag = tooltip.querySelector(".tt-draft") as HTMLElement;
-  draftTag.classList.toggle("hidden", !draft);
-  (tooltip.querySelector(".tt-title") as HTMLElement).textContent = title;
-  (tooltip.querySelector(".tt-author") as HTMLElement).textContent = author ? `@${author}` : "";
+  const draftTag = tooltip.querySelector(".tt-draft") as HTMLElement
+  draftTag.classList.toggle("hidden", !draft)
+  ;(tooltip.querySelector(".tt-title") as HTMLElement).textContent = title
+  ;(tooltip.querySelector(".tt-author") as HTMLElement).textContent = author ? `@${author}` : ""
 
-  const ciBadge = tooltip.querySelector(".tt-ci") as HTMLElement;
-  ciBadge.textContent = CI_TEXT[ciStatus] ?? ciStatus;
-  ciBadge.className = `tt-badge tt-ci ci-${ciStatus}`;
+  const ciBadge = tooltip.querySelector(".tt-ci") as HTMLElement
+  ciBadge.textContent = CI_TEXT[ciStatus] ?? ciStatus
+  ciBadge.className = `tt-badge tt-ci ci-${ciStatus}`
 
-  const reviewBadge = tooltip.querySelector(".tt-review") as HTMLElement;
-  reviewBadge.textContent = REVIEW_TEXT[reviewStatus] ?? reviewStatus;
-  reviewBadge.className = `tt-badge tt-review review-${reviewStatus}`;
+  const reviewBadge = tooltip.querySelector(".tt-review") as HTMLElement
+  reviewBadge.textContent = REVIEW_TEXT[reviewStatus] ?? reviewStatus
+  reviewBadge.className = `tt-badge tt-review review-${reviewStatus}`
 
-  const staleBadge = tooltip.querySelector(".tt-stale") as HTMLElement;
-  staleBadge.classList.toggle("hidden", !stale);
+  const staleBadge = tooltip.querySelector(".tt-stale") as HTMLElement
+  staleBadge.classList.toggle("hidden", !stale)
 
   // Position: prefer right of node, flip left if near viewport edge
-  const bb = node.renderedBoundingBox();
-  const rect = container.getBoundingClientRect();
-  const TW = 240; // tooltip width (matches CSS)
+  const bb = node.renderedBoundingBox()
+  const rect = container.getBoundingClientRect()
+  const TW = 240 // tooltip width (matches CSS)
 
-  let x = rect.left + bb.x2 + 14;
-  let y = rect.top + bb.y1;
+  let x = rect.left + bb.x2 + 14
+  let y = rect.top + bb.y1
 
   if (x + TW > window.innerWidth - 8) {
-    x = rect.left + bb.x1 - TW - 14;
+    x = rect.left + bb.x1 - TW - 14
   }
   // Clamp vertically so it never bleeds off-screen
-  const TH = tooltip.offsetHeight || 150;
-  if (y + TH > window.innerHeight - 8) y = window.innerHeight - TH - 8;
-  if (y < 8) y = 8;
+  const TH = tooltip.offsetHeight || 150
+  if (y + TH > window.innerHeight - 8) y = window.innerHeight - TH - 8
+  if (y < 8) y = 8
 
-  tooltip.style.left = `${Math.round(x)}px`;
-  tooltip.style.top = `${Math.round(y)}px`;
-  tooltip.classList.add("visible");
+  tooltip.style.left = `${Math.round(x)}px`
+  tooltip.style.top = `${Math.round(y)}px`
+  tooltip.classList.add("visible")
 }
 
 function hideTooltip(): void {
-  document.getElementById("tooltip")!.classList.remove("visible");
+  document.getElementById("tooltip")?.classList.remove("visible")
 }
 
 // ─── Graph events ─────────────────────────────────────────────────────────────
 
 export function setupGraph(onAction: () => void): void {
-  const container = document.getElementById("cy")!;
-  const tooltipEl = document.getElementById("tooltip")!;
+  const container = document.getElementById("cy") as HTMLElement
+  const tooltipEl = document.getElementById("tooltip") as HTMLElement
 
-  let mouseInTooltip = false;
-  let hideTimer: ReturnType<typeof setTimeout> | null = null;
+  let mouseInTooltip = false
+  let hideTimer: ReturnType<typeof setTimeout> | null = null
 
   function scheduleHide(): void {
     hideTimer = setTimeout(() => {
-      if (!mouseInTooltip) hideTooltip();
-      hideTimer = null;
-    }, 80);
+      if (!mouseInTooltip) hideTooltip()
+      hideTimer = null
+    }, 80)
   }
 
   tooltipEl.addEventListener("mouseenter", () => {
-    mouseInTooltip = true;
+    mouseInTooltip = true
     if (hideTimer !== null) {
-      clearTimeout(hideTimer);
-      hideTimer = null;
+      clearTimeout(hideTimer)
+      hideTimer = null
     }
-  });
+  })
 
   tooltipEl.addEventListener("mouseleave", () => {
-    mouseInTooltip = false;
-    hideTooltip();
-  });
+    mouseInTooltip = false
+    hideTooltip()
+  })
 
   function bindTooltipAction(
     btn: HTMLButtonElement,
@@ -275,67 +274,82 @@ export function setupGraph(onAction: () => void): void {
     getSuccessMsg: () => string,
   ): void {
     btn.addEventListener("click", () => {
-      const branch = btn.dataset["branch"] ?? "";
-      if (!branch) return;
-      hideTooltip();
+      const branch = btn.dataset.branch ?? ""
+      if (!branch) return
+      hideTooltip()
       postAction<ActionResponse>(endpoint, { branch }, btn, pendingLabel, (data) => {
         if (data.ok) {
-          showToast(getSuccessMsg(), "success");
-          onAction();
+          showToast(getSuccessMsg(), "success")
+          onAction()
         } else {
-          handleConflict(data, "Failed");
+          handleConflict(data, "Failed")
         }
-      });
-    });
+      })
+    })
   }
 
-  const reorderBtn  = document.getElementById("tt-reorder-btn")  as HTMLButtonElement;
-  const splitBtn    = document.getElementById("tt-split-btn")    as HTMLButtonElement;
-  const mergeBtn    = document.getElementById("tt-merge-btn")    as HTMLButtonElement;
-  const closeBtn    = document.getElementById("tt-close-btn")    as HTMLButtonElement;
-  const checkoutBtn = document.getElementById("tt-checkout-btn") as HTMLButtonElement;
+  const reorderBtn = document.getElementById("tt-reorder-btn") as HTMLButtonElement
+  const splitBtn = document.getElementById("tt-split-btn") as HTMLButtonElement
+  const mergeBtn = document.getElementById("tt-merge-btn") as HTMLButtonElement
+  const closeBtn = document.getElementById("tt-close-btn") as HTMLButtonElement
+  const checkoutBtn = document.getElementById("tt-checkout-btn") as HTMLButtonElement
 
-  bindTooltipAction(reorderBtn,  "/api/reorder",  "Reordering…",    () => `#${reorderBtn.dataset["number"]} promoted above its parent`);
-  bindTooltipAction(splitBtn,    "/api/split",    "Splitting…",     () => `#${splitBtn.dataset["number"]} split off as new stack`);
-  bindTooltipAction(mergeBtn,    "/api/merge",    "Merging…",       () => `#${mergeBtn.dataset["number"]} merged`);
-  bindTooltipAction(closeBtn,    "/api/close",    "Closing…",       () => `#${closeBtn.dataset["number"]} closed`);
-  bindTooltipAction(checkoutBtn, "/api/checkout", "Checking out…",  () => `Checked out ${checkoutBtn.dataset["branch"] ?? ""}`);
+  bindTooltipAction(
+    reorderBtn,
+    "/api/reorder",
+    "Reordering…",
+    () => `#${reorderBtn.dataset.number} promoted above its parent`,
+  )
+  bindTooltipAction(
+    splitBtn,
+    "/api/split",
+    "Splitting…",
+    () => `#${splitBtn.dataset.number} split off as new stack`,
+  )
+  bindTooltipAction(mergeBtn, "/api/merge", "Merging…", () => `#${mergeBtn.dataset.number} merged`)
+  bindTooltipAction(closeBtn, "/api/close", "Closing…", () => `#${closeBtn.dataset.number} closed`)
+  bindTooltipAction(
+    checkoutBtn,
+    "/api/checkout",
+    "Checking out…",
+    () => `Checked out ${checkoutBtn.dataset.branch ?? ""}`,
+  )
 
   cy.on("mouseover", "node:not(.dimmed)", (evt) => {
-    const node = evt.target as cytoscape.NodeSingular;
-    const branch: string = node.data("headBranch") ?? "";
-    const number: string = String(node.data("number") ?? "");
+    const node = evt.target as cytoscape.NodeSingular
+    const branch: string = node.data("headBranch") ?? ""
+    const number: string = String(node.data("number") ?? "")
 
     // Sync branch/number onto action buttons for their click handlers
-    reorderBtn.dataset["branch"] = branch;
-    reorderBtn.dataset["number"] = number;
-    splitBtn.dataset["branch"] = branch;
-    splitBtn.dataset["number"] = number;
-    mergeBtn.dataset["branch"] = branch;
-    mergeBtn.dataset["number"] = number;
-    closeBtn.dataset["branch"] = branch;
-    closeBtn.dataset["number"] = number;
-    checkoutBtn.dataset["branch"] = branch;
+    reorderBtn.dataset.branch = branch
+    reorderBtn.dataset.number = number
+    splitBtn.dataset.branch = branch
+    splitBtn.dataset.number = number
+    mergeBtn.dataset.branch = branch
+    mergeBtn.dataset.number = number
+    closeBtn.dataset.branch = branch
+    closeBtn.dataset.number = number
+    checkoutBtn.dataset.branch = branch
 
-    node.addClass("hovered");
-    container.style.cursor = "pointer";
-    showTooltip(node, container);
-  });
+    node.addClass("hovered")
+    container.style.cursor = "pointer"
+    showTooltip(node, container)
+  })
 
   cy.on("mouseout", "node", (evt) => {
-    (evt.target as cytoscape.NodeSingular).removeClass("hovered");
-    container.style.cursor = "default";
-    scheduleHide();
-  });
+    ;(evt.target as cytoscape.NodeSingular).removeClass("hovered")
+    container.style.cursor = "default"
+    scheduleHide()
+  })
 
   // Hide tooltip on pan/zoom so it doesn't drift
   cy.on("viewport", () => {
-    mouseInTooltip = false;
-    hideTooltip();
-  });
+    mouseInTooltip = false
+    hideTooltip()
+  })
 
   cy.on("tap", "node:not(.dimmed)", (evt) => {
-    const url: string | undefined = (evt.target as cytoscape.NodeSingular).data("url");
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  });
+    const url: string | undefined = (evt.target as cytoscape.NodeSingular).data("url")
+    if (url) window.open(url, "_blank", "noopener,noreferrer")
+  })
 }

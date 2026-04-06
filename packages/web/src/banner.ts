@@ -1,6 +1,6 @@
 import type { ApiPR } from "./types"
 
-const banner    = document.getElementById("stale-banner")!
+const banner = document.getElementById("stale-banner") as HTMLElement
 const bannerText = banner.querySelector(".banner-text") as HTMLElement
 const dismissBtn = banner.querySelector(".banner-dismiss") as HTMLButtonElement
 
@@ -16,21 +16,20 @@ export function updateStaleBanner(prs: ApiPR[]): void {
 
   if (stale.length === 0) {
     banner.classList.add("hidden")
-    dismissed = false   // reset so it reappears if staleness returns
+    dismissed = false // reset so it reappears if staleness returns
     return
   }
 
   if (dismissed) return
 
   if (stale.length === 1) {
-    const pr = stale[0]!
+    const pr = stale[0] as ApiPR
     bannerText.textContent =
       `Restack needed — #${pr.number} (${pr.headBranch}) is out of date.` +
       `  Run: pramid stack restack ${pr.headBranch}`
   } else {
     const list = stale.map((pr) => pr.headBranch).join(", ")
-    bannerText.textContent =
-      `Restack needed — ${stale.length} PRs are out of date: ${list}`
+    bannerText.textContent = `Restack needed — ${stale.length} PRs are out of date: ${list}`
   }
 
   banner.classList.remove("hidden")

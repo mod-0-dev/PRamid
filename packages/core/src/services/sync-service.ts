@@ -1,11 +1,19 @@
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { saveConflictState } from "../git/conflict-state.ts"
+import {
+  type GitRunner,
+  detectStackParent,
+  fetchRemote,
+  forcePush,
+  getBranchSha,
+  rebaseBranch,
+  rebaseOnto,
+} from "../git/git-ops.ts"
+import { getParentBranch, pruneStaleParents } from "../git/pramid-state.ts"
+import { getDescendants, getParent, getStack, topologicalOrder } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import type { PrId } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getDescendants, getParent, getStack, topologicalOrder } from "../graph/dag.ts"
-import { fetchRemote, rebaseBranch, rebaseOnto, getBranchSha, detectStackParent, forcePush, type GitRunner } from "../git/git-ops.ts"
-import { getParentBranch, pruneStaleParents } from "../git/pramid-state.ts"
-import { saveConflictState } from "../git/conflict-state.ts"
 
 export interface SyncParams {
   repo: RepoRef
@@ -101,12 +109,12 @@ export async function syncStack(client: VcsClient, params: SyncParams): Promise<
 
     const rootUpstream = !parentOldTip
       ? (getParentBranch(pr.headBranch, cwd) ??
-         detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
+        detectStackParent(pr.headBranch, onto, cwd, _gitRunner))
       : undefined
 
     const result =
       parentOldTip || rootUpstream
-        ? rebaseOnto(pr.headBranch, onto, (parentOldTip ?? rootUpstream)!, cwd, _gitRunner)
+        ? rebaseOnto(pr.headBranch, onto, (parentOldTip ?? rootUpstream) as string, cwd, _gitRunner)
         : rebaseBranch(pr.headBranch, onto, cwd, _gitRunner)
 
     if (!result.success) {

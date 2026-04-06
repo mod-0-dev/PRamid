@@ -1,8 +1,8 @@
-import { describe, expect, test, mock } from "bun:test"
-import { reorderStack, splitStack } from "./reorder-service.ts"
-import type { PullRequest } from "../graph/graph.ts"
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import { describe, expect, mock, test } from "bun:test"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
 import type { GitRunner } from "../git/git-ops.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import { reorderStack, splitStack } from "./reorder-service.ts"
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,8 @@ function makeClient(prs: PullRequest[]): VcsClient {
     forcePush: mock(() => Promise.reject(new Error("not used"))),
     rebaseBranch: mock(() => Promise.reject(new Error("not used"))),
     mergePR: mock(() => Promise.resolve()),
+    closePR: mock(() => Promise.resolve()),
+    updatePRBody: mock(() => Promise.resolve()),
     getCIStatus: mock(() => Promise.resolve("none" as const)),
     getReviewStatus: mock(() => Promise.resolve("none" as const)),
   }
@@ -147,8 +149,8 @@ describe("reorderStack", () => {
     })
 
     expect(result.conflict).not.toBeNull()
-    expect(result.conflict!.pr.headBranch).toBe("stack/2")
-    expect(result.conflict!.files).toContain("src/auth.ts")
+    expect(result.conflict?.pr.headBranch).toBe("stack/2")
+    expect(result.conflict?.files).toContain("src/auth.ts")
     expect(result.restacked).toHaveLength(0)
   })
 
@@ -174,7 +176,12 @@ describe("reorderStack", () => {
     const client = makeClient([PR1, PR2])
 
     await expect(
-      reorderStack(client, { repo: REPO, branch: "nonexistent", cwd: CWD, _gitRunner: makeGitRunner() }),
+      reorderStack(client, {
+        repo: REPO,
+        branch: "nonexistent",
+        cwd: CWD,
+        _gitRunner: makeGitRunner(),
+      }),
     ).rejects.toThrow('No open PR found with head branch "nonexistent"')
   })
 
@@ -182,7 +189,12 @@ describe("reorderStack", () => {
     const client = makeClient([PR1, PR2])
 
     await expect(
-      reorderStack(client, { repo: REPO, branch: "stack/1", cwd: CWD, _gitRunner: makeGitRunner() }),
+      reorderStack(client, {
+        repo: REPO,
+        branch: "stack/1",
+        cwd: CWD,
+        _gitRunner: makeGitRunner(),
+      }),
     ).rejects.toThrow("root PR")
   })
 })
@@ -246,7 +258,7 @@ describe("splitStack", () => {
     })
 
     expect(result.conflict).not.toBeNull()
-    expect(result.conflict!.pr.headBranch).toBe("stack/2")
+    expect(result.conflict?.pr.headBranch).toBe("stack/2")
     expect(result.skipped.map((p) => p.headBranch)).toEqual(["stack/3"])
   })
 
@@ -272,7 +284,12 @@ describe("splitStack", () => {
     const client = makeClient([PR1])
 
     await expect(
-      splitStack(client, { repo: REPO, branch: "nonexistent", cwd: CWD, _gitRunner: makeGitRunner() }),
+      splitStack(client, {
+        repo: REPO,
+        branch: "nonexistent",
+        cwd: CWD,
+        _gitRunner: makeGitRunner(),
+      }),
     ).rejects.toThrow('No open PR found with head branch "nonexistent"')
   })
 

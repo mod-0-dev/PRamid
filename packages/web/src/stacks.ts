@@ -1,6 +1,6 @@
-import type { ApiPR } from "./types"
+import { handleConflict, postAction } from "./api-actions"
 import { showToast } from "./toast"
-import { postAction, handleConflict } from "./api-actions"
+import type { ApiPR } from "./types"
 
 // ─── Stack detection ──────────────────────────────────────────────────────────
 
@@ -30,7 +30,10 @@ function detectStacks(prs: ApiPR[]): Stack[] {
     // CI rollup: failure > pending > success > none
     let ciRollup: ApiPR["ciStatus"] = "none"
     for (const pr of members) {
-      if (pr.ciStatus === "failure") { ciRollup = "failure"; break }
+      if (pr.ciStatus === "failure") {
+        ciRollup = "failure"
+        break
+      }
       if (pr.ciStatus === "pending") ciRollup = "pending"
       else if (pr.ciStatus === "success" && ciRollup === "none") ciRollup = "success"
     }
@@ -38,8 +41,8 @@ function detectStacks(prs: ApiPR[]): Stack[] {
     // Review rollup: changes_requested > pending > approved > none
     let reviewRollup: ApiPR["reviewStatus"] = "none"
     const revs = new Set(members.map((pr) => pr.reviewStatus))
-    if (revs.has("changes_requested"))       reviewRollup = "changes_requested"
-    else if (revs.has("pending"))             reviewRollup = "pending"
+    if (revs.has("changes_requested")) reviewRollup = "changes_requested"
+    else if (revs.has("pending")) reviewRollup = "pending"
     else if (members.every((pr) => pr.reviewStatus === "approved")) reviewRollup = "approved"
 
     return {
@@ -77,7 +80,11 @@ function triggerSync(branch: string, btn: HTMLButtonElement): void {
 
 function triggerMergeStack(branch: string, strategy: string, btn: HTMLButtonElement): void {
   void postAction<{
-    ok: boolean; merged?: number; warnings?: string[]; failedAt?: string; error?: string
+    ok: boolean
+    merged?: number
+    warnings?: string[]
+    failedAt?: string
+    error?: string
   }>("/api/merge-stack", { branch, strategy }, btn, "Merging…", (data) => {
     for (const w of data.warnings ?? []) showToast(`⚠ ${w}`, "info")
     if (data.ok) showToast(`Merged ${data.merged} PR(s) in stack`, "success")
@@ -88,7 +95,7 @@ function triggerMergeStack(branch: string, strategy: string, btn: HTMLButtonElem
 
 // ─── Table render ─────────────────────────────────────────────────────────────
 
-const CI_DOT: Record<string, string>     = { success: "●", failure: "●", pending: "●", none: "○" }
+const CI_DOT: Record<string, string> = { success: "●", failure: "●", pending: "●", none: "○" }
 const REVIEW_TEXT: Record<string, string> = {
   approved: "approved",
   changes_requested: "changes needed",
@@ -97,7 +104,7 @@ const REVIEW_TEXT: Record<string, string> = {
 }
 
 function renderTable(stacks: Stack[]): void {
-  const tbody = document.querySelector("#stacks-table tbody")!
+  const tbody = document.querySelector("#stacks-table tbody") as HTMLTableSectionElement
   tbody.innerHTML = ""
 
   if (stacks.length === 0) {
@@ -155,7 +162,7 @@ function setupDelegation(tbody: Element): void {
   tbody.addEventListener("click", (e) => {
     const btn = (e.target as Element).closest("button") as HTMLButtonElement | null
     if (!btn || btn.disabled) return
-    const branch = btn.dataset["branch"] ?? ""
+    const branch = btn.dataset.branch ?? ""
     if (!branch) return
 
     if (btn.classList.contains("restack-btn")) {
@@ -163,9 +170,12 @@ function setupDelegation(tbody: Element): void {
     } else if (btn.classList.contains("sync-btn")) {
       triggerSync(branch, btn)
     } else if (btn.classList.contains("merge-stack-btn")) {
-      const strategy = (
-        btn.closest(".merge-stack-group")?.querySelector(".strategy-select") as HTMLSelectElement | null
-      )?.value ?? "merge"
+      const strategy =
+        (
+          btn
+            .closest(".merge-stack-group")
+            ?.querySelector(".strategy-select") as HTMLSelectElement | null
+        )?.value ?? "merge"
       triggerMergeStack(branch, strategy, btn)
     }
   })
@@ -177,13 +187,14 @@ export function updateStacksView(prs: ApiPR[]): void {
   const stacks = detectStacks(prs)
 
   const countEl = document.getElementById("stacks-count")
-  if (countEl) countEl.textContent = `${stacks.length} stack${stacks.length !== 1 ? "s" : ""}  ·  ${prs.length} PRs`
+  if (countEl)
+    countEl.textContent = `${stacks.length} stack${stacks.length !== 1 ? "s" : ""}  ·  ${prs.length} PRs`
 
   renderTable(stacks)
 }
 
 export function setupStacksView(): void {
-  const tbody = document.querySelector("#stacks-table tbody")!
+  const tbody = document.querySelector("#stacks-table tbody") as HTMLTableSectionElement
   setupDelegation(tbody)
   renderTable([])
 }
@@ -191,7 +202,11 @@ export function setupStacksView(): void {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function escHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
 function escAttr(str: string): string {

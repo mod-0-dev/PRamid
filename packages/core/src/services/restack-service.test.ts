@@ -1,8 +1,8 @@
-import { describe, expect, test, mock } from "bun:test"
-import { restack } from "./restack-service.ts"
-import type { PullRequest } from "../graph/graph.ts"
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import { describe, expect, mock, test } from "bun:test"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
 import type { GitRunner } from "../git/git-ops.ts"
+import type { PullRequest } from "../graph/graph.ts"
+import { restack } from "./restack-service.ts"
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,8 @@ function makeClient(prs: PullRequest[]): VcsClient {
     forcePush: mock(() => Promise.reject(new Error("not used"))),
     rebaseBranch: mock(() => Promise.reject(new Error("not used"))),
     mergePR: mock(() => Promise.resolve()),
+    closePR: mock(() => Promise.resolve()),
+    updatePRBody: mock(() => Promise.resolve()),
     getCIStatus: mock(() => Promise.resolve("none" as const)),
     getReviewStatus: mock(() => Promise.resolve("none" as const)),
   }
@@ -121,8 +123,8 @@ describe("restack", () => {
     })
 
     expect(result.conflict).not.toBeNull()
-    expect(result.conflict!.pr.headBranch).toBe("stack/1")
-    expect(result.conflict!.files).toContain("src/auth.ts")
+    expect(result.conflict?.pr.headBranch).toBe("stack/1")
+    expect(result.conflict?.files).toContain("src/auth.ts")
     expect(result.skipped).toHaveLength(2) // stack/2 and stack/3 skipped
     expect(result.restacked).toHaveLength(0)
   })
@@ -131,7 +133,12 @@ describe("restack", () => {
     const client = makeClient([PR1, PR2])
 
     await expect(
-      restack(client, { repo: REPO, startBranch: "nonexistent", cwd: CWD, _gitRunner: makeGitRunner() }),
+      restack(client, {
+        repo: REPO,
+        startBranch: "nonexistent",
+        cwd: CWD,
+        _gitRunner: makeGitRunner(),
+      }),
     ).rejects.toThrow('No open PR found with head branch "nonexistent"')
   })
 

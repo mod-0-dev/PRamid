@@ -1,27 +1,41 @@
+import {
+  checkoutBranch,
+  formatLog,
+  getCurrentBranch,
+  stackGoto,
+  stackNext,
+  stackPrev,
+} from "@pramid/core"
 import type { Command } from "commander"
-import { formatLog, stackNext, stackPrev, stackGoto, getCurrentBranch, checkoutBranch } from "@pramid/core"
-import { resolveRepo, resolveClient } from "../../utils.ts"
+import { resolveClient, resolveRepo } from "../../utils.ts"
 
 export function registerNavCommands(cmd: Command): void {
   cmd
     .command("log [branch]")
-    .description("Display the PR stack as a tree (defaults to all stacks; pass a branch to show only that branch and its descendants)")
+    .description(
+      "Display the PR stack as a tree (defaults to all stacks; pass a branch to show only that branch and its descendants)",
+    )
     .option("--repo <owner/repo>", "GitHub repository (default: auto-detect from git remote)")
     .option("--remote <name>", "Git remote name used for auto-detection", "origin")
     .option("--no-color", "Disable ANSI color output")
-    .action(async (branch: string | undefined, opts: { repo?: string; remote: string; color: boolean }) => {
-      const repo = resolveRepo(opts.repo, opts.remote)
-      const client = resolveClient(opts.remote)
-      const useColor = opts.color && process.stdout.isTTY
+    .action(
+      async (
+        branch: string | undefined,
+        opts: { repo?: string; remote: string; color: boolean },
+      ) => {
+        const repo = resolveRepo(opts.repo, opts.remote)
+        const client = resolveClient(opts.remote)
+        const useColor = opts.color && process.stdout.isTTY
 
-      try {
-        const prs = await client.listOpenPRs(repo)
-        console.log(formatLog(prs, { branch, color: useColor }))
-      } catch (err) {
-        console.error("Error:", (err as Error).message)
-        process.exit(1)
-      }
-    })
+        try {
+          const prs = await client.listOpenPRs(repo)
+          console.log(formatLog(prs, { branch, color: useColor }))
+        } catch (err) {
+          console.error("Error:", (err as Error).message)
+          process.exit(1)
+        }
+      },
+    )
 
   cmd
     .command("next")
@@ -38,7 +52,7 @@ export function registerNavCommands(cmd: Command): void {
         const result = stackNext(prs, current)
         if (!result.ok) {
           console.error(result.error)
-          if (result.choices) result.choices.forEach((c) => console.error(c))
+          if (result.choices) for (const c of result.choices) console.error(c)
           process.exit(1)
         }
         checkoutBranch(result.branch, process.cwd())
@@ -51,7 +65,9 @@ export function registerNavCommands(cmd: Command): void {
 
   cmd
     .command("prev")
-    .description("Checkout the parent branch of the current branch in the stack (or the base branch at the root)")
+    .description(
+      "Checkout the parent branch of the current branch in the stack (or the base branch at the root)",
+    )
     .option("--repo <owner/repo>", "GitHub repository (default: auto-detect from git remote)")
     .option("--remote <name>", "Git remote name used for auto-detection", "origin")
     .action(async (opts: { repo?: string; remote: string }) => {
@@ -92,7 +108,7 @@ export function registerNavCommands(cmd: Command): void {
         const result = stackGoto(prs, query)
         if (!result.ok) {
           console.error(result.error)
-          if (result.choices) result.choices.forEach((c) => console.error(c))
+          if (result.choices) for (const c of result.choices) console.error(c)
           process.exit(1)
         }
         checkoutBranch(result.branch, process.cwd())

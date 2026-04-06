@@ -1,17 +1,17 @@
-import type { Command } from "commander"
 import {
-  restack,
+  clearConflictState,
+  forcePush,
+  getCurrentBranch,
+  loadConflictState,
+  rebaseAbort,
+  rebaseContinue,
   reorderStack,
+  restack,
   splitStack,
   syncStack,
-  getCurrentBranch,
-  forcePush,
-  rebaseContinue,
-  rebaseAbort,
-  loadConflictState,
-  clearConflictState,
 } from "@pramid/core"
-import { resolveRepo, resolveClient, printRebaseFailure } from "../../utils.ts"
+import type { Command } from "commander"
+import { printRebaseFailure, resolveClient, resolveRepo } from "../../utils.ts"
 
 // ─── Shared continue/abort helpers ────────────────────────────────────────────
 
@@ -54,7 +54,10 @@ async function handleContinue(remote: string, expectedCommand: "restack" | "sync
   forcePush(state.conflictBranch, cwd, state.remote)
 
   // Update PR base branch if the parent changed
-  if (state.conflictPr.parentHeadBranch && state.conflictPr.baseBranch !== state.conflictPr.parentHeadBranch) {
+  if (
+    state.conflictPr.parentHeadBranch &&
+    state.conflictPr.baseBranch !== state.conflictPr.parentHeadBranch
+  ) {
     await client.updateBaseBranch(state.conflictPr.id, state.conflictPr.parentHeadBranch)
   }
 
@@ -64,7 +67,7 @@ async function handleContinue(remote: string, expectedCommand: "restack" | "sync
   if (state.remainingBranches.length > 0) {
     const { restacked, conflict, skipped } = await restack(client, {
       repo: state.repo,
-      startBranch: state.remainingBranches[0]!,
+      startBranch: state.remainingBranches[0] as string,
       remote: state.remote,
     })
 
@@ -117,7 +120,13 @@ export function registerRebaseCommands(cmd: Command): void {
     .action(
       async (
         branch: string | undefined,
-        opts: { repo?: string; dryRun?: boolean; remote: string; continue?: boolean; abort?: boolean },
+        opts: {
+          repo?: string
+          dryRun?: boolean
+          remote: string
+          continue?: boolean
+          abort?: boolean
+        },
       ) => {
         if (opts.abort) {
           handleAbort("restack")
@@ -159,7 +168,9 @@ export function registerRebaseCommands(cmd: Command): void {
         } catch (err) {
           const msg = (err as Error).message
           if (msg.includes("No open PR found") && msg.includes(branch)) {
-            console.error(`Error: No open PR found for branch "${branch}" -- it may have already been merged.`)
+            console.error(
+              `Error: No open PR found for branch "${branch}" -- it may have already been merged.`,
+            )
           } else {
             console.error("Error:", msg)
           }
@@ -251,7 +262,13 @@ export function registerRebaseCommands(cmd: Command): void {
     .action(
       async (
         branch: string | undefined,
-        opts: { repo?: string; remote: string; dryRun?: boolean; continue?: boolean; abort?: boolean },
+        opts: {
+          repo?: string
+          remote: string
+          dryRun?: boolean
+          continue?: boolean
+          abort?: boolean
+        },
       ) => {
         if (opts.abort) {
           handleAbort("sync")
@@ -277,7 +294,9 @@ export function registerRebaseCommands(cmd: Command): void {
 
           if (opts.dryRun) return
 
-          console.log(`Synced stack rooted at #${root.number} (${root.headBranch}) onto ${opts.remote}/${baseBranch}`)
+          console.log(
+            `Synced stack rooted at #${root.number} (${root.headBranch}) onto ${opts.remote}/${baseBranch}`,
+          )
           if (synced.length > 0) {
             console.log(`Rebased ${synced.length} PR(s):`)
             for (const pr of synced) console.log(`  ✓ #${pr.number}  ${pr.headBranch}`)

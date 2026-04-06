@@ -1,9 +1,9 @@
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { type GitRunner, forcePush, rebaseOnto } from "../git/git-ops.ts"
+import { unsetParent } from "../git/pramid-state.ts"
+import { getChildren, getDescendants, getParent, topologicalOrder } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getParent, getChildren, getDescendants, topologicalOrder } from "../graph/dag.ts"
-import { rebaseOnto, forcePush, type GitRunner } from "../git/git-ops.ts"
-import { unsetParent } from "../git/pramid-state.ts"
 
 // ─── reorderStack ─────────────────────────────────────────────────────────────
 
@@ -38,8 +38,18 @@ export interface ReorderResult {
  *
  * All descendants are rebased so they stay under A.
  */
-export async function reorderStack(client: VcsClient, params: ReorderParams): Promise<ReorderResult> {
-  const { repo, branch, cwd = process.cwd(), remote = "origin", dryRun = false, _gitRunner } = params
+export async function reorderStack(
+  client: VcsClient,
+  params: ReorderParams,
+): Promise<ReorderResult> {
+  const {
+    repo,
+    branch,
+    cwd = process.cwd(),
+    remote = "origin",
+    dryRun = false,
+    _gitRunner,
+  } = params
 
   const prs = await client.listOpenPRs(repo)
   const graph = buildGraph(prs)
@@ -64,7 +74,7 @@ export async function reorderStack(client: VcsClient, params: ReorderParams): Pr
       const subtreeIds = new Set(getDescendants(graph, c.id).map((p) => p.id))
       const ordered = topologicalOrder(graph).filter((p) => subtreeIds.has(p.id))
       for (const pr of ordered) {
-        const onto = pr.id === c.id ? a.headBranch : getParent(graph, pr.id)!.headBranch
+        const onto = pr.id === c.id ? a.headBranch : getParent(graph, pr.id)?.headBranch
         console.log(`    rebase ${pr.headBranch} --onto ${onto} (skip ${gBranch})`)
       }
     }
@@ -77,7 +87,13 @@ export async function reorderStack(client: VcsClient, params: ReorderParams): Pr
   const r1 = rebaseOnto(b.headBranch, gBranch, a.headBranch, cwd, _gitRunner)
   if (!r1.success) {
     const skipped = [a, ...bChildren.flatMap((c) => getDescendants(graph, c.id))]
-    return { promotedPr: b, demotedPr: a, restacked, conflict: { pr: b, files: r1.conflictedFiles ?? [], errorMessage: r1.errorMessage }, skipped }
+    return {
+      promotedPr: b,
+      demotedPr: a,
+      restacked,
+      conflict: { pr: b, files: r1.conflictedFiles ?? [], errorMessage: r1.errorMessage },
+      skipped,
+    }
   }
   forcePush(b.headBranch, cwd, remote, _gitRunner)
   restacked.push(b)
@@ -86,7 +102,13 @@ export async function reorderStack(client: VcsClient, params: ReorderParams): Pr
   const r2 = rebaseOnto(a.headBranch, b.headBranch, gBranch, cwd, _gitRunner)
   if (!r2.success) {
     const skipped = bChildren.flatMap((c) => getDescendants(graph, c.id))
-    return { promotedPr: b, demotedPr: a, restacked, conflict: { pr: a, files: r2.conflictedFiles ?? [], errorMessage: r2.errorMessage }, skipped }
+    return {
+      promotedPr: b,
+      demotedPr: a,
+      restacked,
+      conflict: { pr: a, files: r2.conflictedFiles ?? [], errorMessage: r2.errorMessage },
+      skipped,
+    }
   }
   forcePush(a.headBranch, cwd, remote, _gitRunner)
   restacked.push(a)
@@ -102,7 +124,7 @@ export async function reorderStack(client: VcsClient, params: ReorderParams): Pr
 
     for (const pr of ordered) {
       // Immediate children of B now live under A; deeper descendants stay under their same parent
-      const onto = pr.id === child.id ? a.headBranch : getParent(graph, pr.id)!.headBranch
+      const onto = pr.id === child.id ? a.headBranch : getParent(graph, pr.id)?.headBranch
 
       if (pr.id === child.id) {
         await client.updateBaseBranch(pr.id, a.headBranch)
@@ -162,7 +184,14 @@ export interface SplitResult {
  * This can conflict if B or any descendant depends on A's changes.
  */
 export async function splitStack(client: VcsClient, params: SplitParams): Promise<SplitResult> {
-  const { repo, branch, cwd = process.cwd(), remote = "origin", dryRun = false, _gitRunner } = params
+  const {
+    repo,
+    branch,
+    cwd = process.cwd(),
+    remote = "origin",
+    dryRun = false,
+    _gitRunner,
+  } = params
 
   const prs = await client.listOpenPRs(repo)
   const graph = buildGraph(prs)
@@ -180,7 +209,7 @@ export async function splitStack(client: VcsClient, params: SplitParams): Promis
   if (dryRun) {
     console.log(`  [dry-run] split "${b.headBranch}" off from "${a.headBranch}"`)
     for (const pr of ordered) {
-      const onto = pr.id === b.id ? a.baseBranch : getParent(graph, pr.id)!.headBranch
+      const onto = pr.id === b.id ? a.baseBranch : getParent(graph, pr.id)?.headBranch
       console.log(`    rebase ${pr.headBranch} --onto ${onto} (skip ${a.headBranch})`)
     }
     return { splitPr: b, restacked: [], conflict: null, skipped: [] }
@@ -189,13 +218,17 @@ export async function splitStack(client: VcsClient, params: SplitParams): Promis
   const restacked: PullRequest[] = []
 
   for (const pr of ordered) {
-    const onto = pr.id === b.id ? a.baseBranch : getParent(graph, pr.id)!.headBranch
+    const onto = pr.id === b.id ? a.baseBranch : getParent(graph, pr.id)?.headBranch
 
     if (pr.id === b.id) {
       await client.updateBaseBranch(b.id, a.baseBranch)
       // B is now a root PR — its old pramidParent (pointing to A) is no longer valid.
       // Clear it so future restack/sync operations don't treat it as a child of A.
-      try { unsetParent(b.headBranch, cwd) } catch { /* ignore */ }
+      try {
+        unsetParent(b.headBranch, cwd)
+      } catch {
+        /* ignore */
+      }
     }
 
     // a.headBranch as upstream: exclude A's commits; git dedup skips any already-present commits

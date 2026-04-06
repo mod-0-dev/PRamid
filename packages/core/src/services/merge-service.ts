@@ -1,7 +1,7 @@
-import type { VcsClient, RepoRef, MergeStrategy } from "../clients/vcs-client.ts"
+import type { MergeStrategy, RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import { getChildren, getDescendants, topologicalOrder } from "../graph/dag.ts"
 import type { PullRequest } from "../graph/graph.ts"
 import { buildGraph } from "../graph/graph.ts"
-import { getChildren, getDescendants, topologicalOrder } from "../graph/dag.ts"
 
 // ─── Single-PR merge ──────────────────────────────────────────────────────────
 
@@ -174,7 +174,8 @@ function collectWarnings(prs: PullRequest[]): string[] {
   for (const pr of prs) {
     if (pr.ciStatus === "failure") warnings.push(`#${pr.number} has failing CI`)
     else if (pr.ciStatus === "pending") warnings.push(`#${pr.number} CI is still running`)
-    if (pr.reviewStatus === "changes_requested") warnings.push(`#${pr.number} has changes requested`)
+    if (pr.reviewStatus === "changes_requested")
+      warnings.push(`#${pr.number} has changes requested`)
     else if (pr.reviewStatus !== "approved") warnings.push(`#${pr.number} is not approved`)
   }
   return warnings

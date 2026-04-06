@@ -1,9 +1,9 @@
-import type { PullRequest, StackGraph } from "../graph/graph.ts"
-import { buildGraph, type PrId } from "../graph/graph.ts"
-import { getChildren, getParent, getRoots } from "../graph/dag.ts"
-import type { VcsClient, RepoRef } from "../clients/vcs-client.ts"
-import { type GitRunner } from "../git/git-ops.ts"
+import type { RepoRef, VcsClient } from "../clients/vcs-client.ts"
+import type { GitRunner } from "../git/git-ops.ts"
 import { setParent } from "../git/pramid-state.ts"
+import { getChildren, getParent, getRoots } from "../graph/dag.ts"
+import type { PullRequest, StackGraph } from "../graph/graph.ts"
+import { type PrId, buildGraph } from "../graph/graph.ts"
 import { refreshStackNav } from "./stack-nav.ts"
 
 // ─── createStack ──────────────────────────────────────────────────────────────
@@ -71,7 +71,11 @@ export async function createStack(
 
     // Persist the parent branch so restack can use --onto after a squash merge
     if (cwd) {
-      try { setParent(branch, prevBranch, cwd) } catch { /* ignore */ }
+      try {
+        setParent(branch, prevBranch, cwd)
+      } catch {
+        /* ignore */
+      }
     }
 
     prevBranch = branch
@@ -82,7 +86,7 @@ export async function createStack(
   if (allSettled.length > 0) {
     // Re-fetch so PR bodies and updated base branches are current
     const fresh = await client.listOpenPRs(repo)
-    await refreshStackNav(client, repo, fresh, allSettled[0]!)
+    await refreshStackNav(client, repo, fresh, allSettled[0] as PullRequest)
   }
 
   return { created, updated, unchanged }
@@ -110,7 +114,7 @@ function prLine(pr: PullRequest, indent: string): string {
   const draft = pr.draft ? " [draft]" : ""
   const stale = pr.stale ? " [stale]" : ""
   const num = `#${pr.number}`.padEnd(5)
-  const title = pr.title.length > 40 ? pr.title.slice(0, 37) + "…" : pr.title.padEnd(40)
+  const title = pr.title.length > 40 ? `${pr.title.slice(0, 37)}…` : pr.title.padEnd(40)
   return `${indent}${num}  ${title}  ${pr.headBranch} → ${pr.baseBranch}  [CI:${ci} review:${review}]${draft}${stale}`
 }
 
@@ -213,7 +217,7 @@ const LOG_REVIEW_COLOR: Record<string, keyof typeof ANSI | null> = {
 }
 
 function logPrLine(pr: PullRequest, useColor: boolean): string {
-  const title = pr.title.length > 45 ? pr.title.slice(0, 42) + "…" : pr.title
+  const title = pr.title.length > 45 ? `${pr.title.slice(0, 42)}…` : pr.title
   const num = colorize("gray", `(#${pr.number})`, useColor)
   const draft = pr.draft ? colorize("gray", " [draft]", useColor) : ""
 
@@ -229,7 +233,7 @@ function logPrLine(pr: PullRequest, useColor: boolean): string {
       : reviewLabel
     : ""
 
-  const stale = pr.stale ? " " + colorize("yellow", "← restack needed", useColor) : ""
+  const stale = pr.stale ? ` ${colorize("yellow", "← restack needed", useColor)}` : ""
 
   const parts = [title, num, ci]
   if (review) parts.push(review)
@@ -259,9 +263,14 @@ function renderLogTree(
   })
 }
 
-function renderStackTree(graph: StackGraph, root: PullRequest, lines: string[], useColor: boolean): void {
+function renderStackTree(
+  graph: StackGraph,
+  root: PullRequest,
+  lines: string[],
+  useColor: boolean,
+): void {
   lines.push(colorize("bold", root.baseBranch, useColor))
-  lines.push("└── " + logPrLine(root, useColor))
+  lines.push(`└── ${logPrLine(root, useColor)}`)
 
   const children = getChildren(graph, root.id)
   children.forEach((child, i) => {
@@ -307,7 +316,7 @@ export function formatLog(prs: PullRequest[], opts: FormatLogOptions = {}): stri
 
   // Scoped to a branch that is itself a standalone PR
   if (branch && targetRoots.length > 0 && stackRoots.length === 0) {
-    renderStackTree(graph, targetRoots[0]!, lines, color)
+    renderStackTree(graph, targetRoots[0] as PullRequest, lines, color)
   }
 
   if (standalone.length > 0) {

@@ -29,7 +29,11 @@ function run(runner: GitRunner, args: string[], cwd: string) {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function getRemoteUrl(remote: string, cwd: string, runner: GitRunner = defaultRunner): string {
+export function getRemoteUrl(
+  remote: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): string {
   const { stdout, exitCode, stderr } = run(runner, ["remote", "get-url", remote], cwd)
   if (exitCode !== 0) throw new Error(`Could not get URL for remote "${remote}": ${stderr.trim()}`)
   return stdout.trim()
@@ -39,10 +43,10 @@ export function getRemoteUrl(remote: string, cwd: string, runner: GitRunner = de
 export function parseOwnerRepo(remoteUrl: string): string | null {
   // SSH: git@github.com:owner/repo[.git]
   let m = remoteUrl.match(/git@[^:]+:(.+?)(?:\.git)?$/)
-  if (m) return m[1]!
+  if (m) return m[1] as string
   // HTTPS: https://github.com/owner/repo[.git]
   m = remoteUrl.match(/https?:\/\/[^/]+\/(.+?)(?:\.git)?$/)
-  if (m) return m[1]!
+  if (m) return m[1] as string
   return null
 }
 
@@ -74,18 +78,30 @@ export function getCurrentBranch(cwd: string, runner: GitRunner = defaultRunner)
   return stdout.trim()
 }
 
-export function branchExists(branch: string, cwd: string, runner: GitRunner = defaultRunner): boolean {
+export function branchExists(
+  branch: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): boolean {
   const { exitCode } = run(runner, ["rev-parse", "--verify", branch], cwd)
   return exitCode === 0
 }
 
-export function getBranchSha(branch: string, cwd: string, runner: GitRunner = defaultRunner): string {
+export function getBranchSha(
+  branch: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): string {
   const { stdout, exitCode, stderr } = run(runner, ["rev-parse", branch], cwd)
   if (exitCode !== 0) throw new Error(`Branch not found: "${branch}": ${stderr.trim()}`)
   return stdout.trim()
 }
 
-export function checkoutBranch(branch: string, cwd: string, runner: GitRunner = defaultRunner): void {
+export function checkoutBranch(
+  branch: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): void {
   const { exitCode, stderr } = run(runner, ["checkout", branch], cwd)
   if (exitCode !== 0) throw new Error(`git checkout ${branch} failed: ${stderr.trim()}`)
 }
@@ -179,7 +195,11 @@ export function forcePush(
   remote = "origin",
   runner: GitRunner = defaultRunner,
 ): void {
-  const { exitCode, stderr } = run(runner, ["push", "--force-with-lease", remote, `${branch}:${branch}`], cwd)
+  const { exitCode, stderr } = run(
+    runner,
+    ["push", "--force-with-lease", remote, `${branch}:${branch}`],
+    cwd,
+  )
   if (exitCode !== 0) throw new Error(`git push failed for ${branch}: ${stderr.trim()}`)
 }
 
@@ -189,7 +209,11 @@ export function forcePush(
  * commit message.
  */
 export function rebaseContinue(cwd: string, runner: GitRunner = defaultRunner): RebaseResult {
-  const { exitCode, stdout, stderr } = run(runner, ["-c", "core.editor=true", "rebase", "--continue"], cwd)
+  const { exitCode, stdout, stderr } = run(
+    runner,
+    ["-c", "core.editor=true", "rebase", "--continue"],
+    cwd,
+  )
   if (exitCode !== 0) {
     const conflictedFiles = extractConflictedFiles(stdout + stderr)
     return { success: false, conflictedFiles, errorMessage: (stderr || stdout).trim() }
@@ -201,7 +225,6 @@ export function rebaseContinue(cwd: string, runner: GitRunner = defaultRunner): 
 export function rebaseAbort(cwd: string, runner: GitRunner = defaultRunner): void {
   run(runner, ["rebase", "--abort"], cwd)
 }
-
 
 /**
  * Find the most recent local branch whose tip is an ancestor of `branch`
@@ -222,22 +245,28 @@ export function detectStackParent(
   if (exitCode !== 0) return null
 
   const candidates: string[] = []
-  for (const b of stdout.trim().split("\n").map((s) => s.trim()).filter((s) => s && s !== branch)) {
-    const isAncestorOfBranch = run(runner, ["merge-base", "--is-ancestor", b, branch], cwd).exitCode === 0
+  for (const b of stdout
+    .trim()
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((s) => s && s !== branch)) {
+    const isAncestorOfBranch =
+      run(runner, ["merge-base", "--is-ancestor", b, branch], cwd).exitCode === 0
     if (!isAncestorOfBranch) continue
-    const isAncestorOfOnto = run(runner, ["merge-base", "--is-ancestor", b, onto], cwd).exitCode === 0
+    const isAncestorOfOnto =
+      run(runner, ["merge-base", "--is-ancestor", b, onto], cwd).exitCode === 0
     if (!isAncestorOfOnto) candidates.push(b)
   }
 
   if (candidates.length === 0) return null
-  if (candidates.length === 1) return candidates[0]!
+  if (candidates.length === 1) return candidates[0] as string
 
   // Pick the most recent candidate: fewest commits between it and branch
   let best: string | null = null
-  let bestCount = Infinity
+  let bestCount = Number.POSITIVE_INFINITY
   for (const c of candidates) {
     const { stdout: countOut } = run(runner, ["rev-list", "--count", `${c}..${branch}`], cwd)
-    const n = parseInt(countOut.trim(), 10)
+    const n = Number.parseInt(countOut.trim(), 10)
     if (!Number.isNaN(n) && n < bestCount) {
       bestCount = n
       best = c
@@ -249,7 +278,7 @@ export function detectStackParent(
 // ─── Private ──────────────────────────────────────────────────────────────────
 
 function extractConflictedFiles(output: string): string[] {
-  return [...output.matchAll(/CONFLICT[^:]*: (?:Merge conflict in |content conflict in )?(.+)/g)].map(
-    (m) => m[1]!.trim(),
-  )
+  return [
+    ...output.matchAll(/CONFLICT[^:]*: (?:Merge conflict in |content conflict in )?(.+)/g),
+  ].map((m) => m[1]?.trim())
 }

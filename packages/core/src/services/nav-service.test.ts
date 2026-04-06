@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { stackGoto, stackNext, stackPrev } from "./nav-service.ts"
 import type { PullRequest } from "../graph/graph.ts"
+import { stackGoto, stackNext, stackPrev } from "./nav-service.ts"
 
 const makePr = (n: number, head: string, base: string): PullRequest => ({
   id: `github:acme/app#${n}`,
@@ -21,10 +21,18 @@ const makePr = (n: number, head: string, base: string): PullRequest => ({
 })
 
 // Linear stack: main → feat/a (#1) → feat/b (#2) → feat/c (#3)
-const LINEAR = [makePr(1, "feat/a", "main"), makePr(2, "feat/b", "feat/a"), makePr(3, "feat/c", "feat/b")]
+const LINEAR = [
+  makePr(1, "feat/a", "main"),
+  makePr(2, "feat/b", "feat/a"),
+  makePr(3, "feat/c", "feat/b"),
+]
 
 // Branching: main → feat/a (#1) → feat/b (#2) and feat/a → feat/c (#3)
-const BRANCHING = [makePr(1, "feat/a", "main"), makePr(2, "feat/b", "feat/a"), makePr(3, "feat/c", "feat/a")]
+const BRANCHING = [
+  makePr(1, "feat/a", "main"),
+  makePr(2, "feat/b", "feat/a"),
+  makePr(3, "feat/c", "feat/a"),
+]
 
 // ─── stackNext ────────────────────────────────────────────────────────────────
 

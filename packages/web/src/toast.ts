@@ -1,7 +1,7 @@
 type ToastType = "success" | "error" | "info"
 
 export function showToast(message: string, type: ToastType = "info"): void {
-  const container = document.getElementById("toast-container")!
+  const container = document.getElementById("toast-container") as HTMLElement
   const toast = document.createElement("div")
   toast.className = `toast toast-${type}`
   toast.textContent = message
