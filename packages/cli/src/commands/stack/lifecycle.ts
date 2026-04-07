@@ -1,9 +1,12 @@
 import {
   branchExists,
+  branchToTitle,
   closePR,
   createStack,
   getAllParents,
   getCurrentBranch,
+  getFirstCommitMessage,
+  getRemoteDefaultBranch,
   mergeSinglePR,
   mergeStack,
   pruneStaleParents,
@@ -289,7 +292,7 @@ export function registerLifecycleCommands(cmd: Command): void {
           }
         }
 
-        const base = allParents[root] ?? "main"
+        const base = allParents[root] ?? getRemoteDefaultBranch(opts.remote, cwd)
 
         if (opts.dryRun) {
           console.log(`Would submit ${stackBranches.length} branch(es) onto "${base}":`)
@@ -312,11 +315,20 @@ export function registerLifecycleCommands(cmd: Command): void {
           }
         }
 
+        // ── Pre-compute titles from first commit on each branch ───────────────────
+        const titles = new Map<string, string>()
+        let prevForTitle = base
+        for (const b of stackBranches) {
+          titles.set(b, getFirstCommitMessage(b, prevForTitle, cwd) ?? branchToTitle(b))
+          prevForTitle = b
+        }
+
         // ── Create / update PRs and refresh nav ──────────────────────────────────
         try {
           const { created, updated, unchanged } = await createStack(client, repo, {
             base,
             branches: stackBranches,
+            titleFn: (b) => titles.get(b) ?? branchToTitle(b),
             draft: opts.draft,
             cwd,
           })

@@ -179,6 +179,45 @@ export function rebaseOnto(
   return { success: true }
 }
 
+/**
+ * Return the name of the remote's default branch (e.g. "main", "master").
+ * Uses `git rev-parse --abbrev-ref <remote>/HEAD` which requires that the
+ * remote HEAD ref has been fetched (`git remote set-head <remote> -a`).
+ * Falls back to "main" if the ref is not set or the command fails.
+ */
+/**
+ * Return the subject line of the first (oldest) commit on `branch` that is
+ * not reachable from `base`.  Returns null if the range is empty or the
+ * command fails (e.g. `base` doesn't exist locally yet).
+ */
+export function getFirstCommitMessage(
+  branch: string,
+  base: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): string | null {
+  const { stdout, exitCode } = run(
+    runner,
+    ["log", "--format=%s", "--reverse", `${base}..${branch}`],
+    cwd,
+  )
+  if (exitCode !== 0) return null
+  const first = stdout.trim().split("\n")[0]?.trim()
+  return first || null
+}
+
+export function getRemoteDefaultBranch(
+  remote: string,
+  cwd: string,
+  runner: GitRunner = defaultRunner,
+): string {
+  const { stdout, exitCode } = run(runner, ["rev-parse", "--abbrev-ref", `${remote}/HEAD`], cwd)
+  if (exitCode !== 0) return "main"
+  const ref = stdout.trim() // e.g. "origin/main"
+  const slash = ref.indexOf("/")
+  return slash !== -1 ? ref.slice(slash + 1) : "main"
+}
+
 export function fetchRemote(
   remote: string,
   branch: string,
