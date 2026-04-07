@@ -1,5 +1,6 @@
 import { graphql } from "@octokit/graphql"
 import { Octokit } from "@octokit/rest"
+import { checkoutBranch, forcePush, getBranchSha, rebaseBranch } from "../git/git-ops.ts"
 import type { CiStatus, PullRequest, ReviewStatus } from "../graph/graph.ts"
 import { sleep } from "../utils.ts"
 import type {
@@ -9,7 +10,6 @@ import type {
   RepoRef,
   VcsClient,
 } from "./vcs-client.ts"
-import { rebaseBranch, forcePush, getBranchSha, checkoutBranch } from "../git/git-ops.ts"
 
 // ─── PrId helpers ─────────────────────────────────────────────────────────────
 

@@ -58,7 +58,8 @@ function jsonResp(body: unknown, status = 200, headers: Record<string, string> =
 function makeFetch(routes: FetchRoute[]): (url: string, init?: RequestInit) => Promise<Response> {
   let call = 0
   return async (url: string, init?: RequestInit) => {
-    const route = (routes[call] ?? routes.at(-1))!
+    const route = routes[call] ?? routes.at(-1)
+    if (!route) throw new Error("makeFetch: routes array is empty")
     call++
     return route(url, init)
   }

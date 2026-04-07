@@ -124,7 +124,8 @@ export async function reorderStack(
 
     for (const pr of ordered) {
       // Immediate children of B now live under A; deeper descendants stay under their same parent
-      const onto = pr.id === child.id ? a.headBranch : (getParent(graph, pr.id)?.headBranch ?? a.headBranch)
+      const onto =
+        pr.id === child.id ? a.headBranch : (getParent(graph, pr.id)?.headBranch ?? a.headBranch)
 
       if (pr.id === child.id) {
         await client.updateBaseBranch(pr.id, a.headBranch)
@@ -218,7 +219,8 @@ export async function splitStack(client: VcsClient, params: SplitParams): Promis
   const restacked: PullRequest[] = []
 
   for (const pr of ordered) {
-    const onto = pr.id === b.id ? a.baseBranch : (getParent(graph, pr.id)?.headBranch ?? a.baseBranch)
+    const onto =
+      pr.id === b.id ? a.baseBranch : (getParent(graph, pr.id)?.headBranch ?? a.baseBranch)
 
     if (pr.id === b.id) {
       await client.updateBaseBranch(b.id, a.baseBranch)

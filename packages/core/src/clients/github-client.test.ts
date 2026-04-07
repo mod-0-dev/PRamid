@@ -42,7 +42,8 @@ function makeGqlMock(
 ) {
   let call = 0
   return mock((_query: string, _vars?: Record<string, unknown>) => {
-    const page = (pages[call++] ?? pages.at(-1))!
+    const page = pages[call++] ?? pages.at(-1)
+    if (!page) throw new Error("makeGqlMock: pages array is empty")
     const query = _query.trim()
     if (query.startsWith("query ListOpenPRs")) {
       return Promise.resolve({
@@ -338,9 +339,7 @@ describe("GitHubClient unimplemented git operations", () => {
       _octokit: makeOctokitMock() as never,
     })
     // forcePush now accepts cwd and remote args, and is a no-op (delegates to git-ops)
-    await expect(
-      client.forcePush("stack/base", "abc123", process.cwd()),
-    ).resolves.toBeUndefined()
+    await expect(client.forcePush("stack/base", "abc123", process.cwd())).resolves.toBeUndefined()
   })
 
   test("rebaseBranch returns error (use git-ops directly)", async () => {

@@ -28,8 +28,8 @@ export function stackNext(prs: PullRequest[], currentBranch: string): NavResult 
     return { ok: false, error: `"${currentBranch}" is the top of the stack -- no child branches.` }
   }
 
-  if (children.length === 1) {
-    return { ok: true, branch: children[0]!.headBranch }
+  if (children.length === 1 && children[0]) {
+    return { ok: true, branch: children[0].headBranch }
   }
 
   return {
@@ -84,7 +84,7 @@ export function stackGoto(prs: PullRequest[], query: string): NavResult {
   // Partial branch name substring match
   const partial = prs.filter((pr) => pr.headBranch.includes(query))
 
-  if (partial.length === 1) return { ok: true, branch: partial[0]!.headBranch }
+  if (partial.length === 1 && partial[0]) return { ok: true, branch: partial[0].headBranch }
 
   if (partial.length > 1) {
     return {
