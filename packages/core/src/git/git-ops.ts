@@ -319,5 +319,7 @@ export function detectStackParent(
 function extractConflictedFiles(output: string): string[] {
   return [
     ...output.matchAll(/CONFLICT[^:]*: (?:Merge conflict in |content conflict in )?(.+)/g),
-  ].map((m) => m[1]?.trim())
+  ]
+    .map((m) => m[1]?.trim())
+    .filter((f): f is string => f !== undefined)
 }

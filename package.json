@@ -9,6 +9,7 @@
     "typescript": "^5"
   },
   "scripts": {
+    "build": "cd packages/web && bun run build && cd ../.. && cd packages/cli && bun run build",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "bun test"

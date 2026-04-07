@@ -129,11 +129,11 @@ describe("reorderStack", () => {
     await reorderStack(client, { repo: REPO, branch: "stack/2", cwd: CWD, _gitRunner: runner })
 
     const rebaseCalls = (runner.run as ReturnType<typeof mock>).mock.calls.filter(
-      ([args]: [string[]]) => args[0] === "rebase",
+      (call: unknown[]) => (call[0] as string[])[0] === "rebase",
     )
     // All rebase calls should use --onto
-    for (const [args] of rebaseCalls) {
-      expect(args).toContain("--onto")
+    for (const call of rebaseCalls) {
+      expect(call[0] as string[]).toContain("--onto")
     }
   })
 
@@ -243,7 +243,7 @@ describe("splitStack", () => {
     expect(client.updateBaseBranch).toHaveBeenCalledWith("github:acme/app#2", "main")
     // stack/3 base unchanged (still stack/2)
     const calls = (client.updateBaseBranch as ReturnType<typeof mock>).mock.calls
-    expect(calls.some(([id]: [string]) => id === "github:acme/app#3")).toBe(false)
+    expect(calls.some((call: unknown[]) => call[0] === "github:acme/app#3")).toBe(false)
   })
 
   test("reports conflict when rebase fails", async () => {

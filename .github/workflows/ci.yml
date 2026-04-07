@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Type check
+        run: |
+          bun x tsc --noEmit
+          bun x tsc --project packages/web/tsconfig.json --noEmit
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Test
+        run: bun test
