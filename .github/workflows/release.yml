@@ -21,6 +21,11 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Sync package version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          bun x json -I -f packages/cli/package.json -e "this.version='${VERSION}'"
+
       - name: Build web assets
         run: cd packages/web && bun run build
 

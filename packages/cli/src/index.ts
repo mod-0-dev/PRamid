@@ -35,7 +35,9 @@ import {
 
 const program = new Command()
 
-program.name("pramid").description("PR stack management tool").version("0.0.1")
+import pkg from "../package.json"
+
+program.name("pramid").description("PR stack management tool").version(pkg.version)
 
 program
   .command("status")
