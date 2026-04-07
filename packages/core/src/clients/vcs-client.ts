@@ -30,7 +30,18 @@ export interface VcsClient {
   getPR(prId: string): Promise<PullRequest>
   createPR(repo: RepoRef, params: CreatePRParams): Promise<PullRequest>
   updateBaseBranch(prId: string, newBase: string): Promise<void>
-  forcePush(branch: string, sha: string): Promise<void>
+  /**
+   * Force-push a branch to the remote. Uses the local branch's current tip.
+   * GitHub has no server-side force-push API, so this delegates to git.
+   * GitLab has server-side force-push via the rebase API, but this method is still
+   * a no-op because branch updates happen through other means.
+   */
+  forcePush(branch: string, sha: string, cwd: string, remote?: string): Promise<void>
+  /**
+   * Rebase a branch on its parent.
+   * For GitHub: uses local git operations (call git-ops directly).
+   * For GitLab: uses platform-side rebase API (POST /projects/:id/merge_requests/:iid/rebase).
+   */
   rebaseBranch(prId: string): Promise<RebaseResult>
   mergePR(prId: string, strategy: MergeStrategy): Promise<void>
   closePR(prId: string): Promise<void>

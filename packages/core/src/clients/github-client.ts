@@ -1,5 +1,6 @@
 import { graphql } from "@octokit/graphql"
 import { Octokit } from "@octokit/rest"
+import { checkoutBranch, forcePush, getBranchSha, rebaseBranch } from "../git/git-ops.ts"
 import type { CiStatus, PullRequest, ReviewStatus } from "../graph/graph.ts"
 import { sleep } from "../utils.ts"
 import type {
@@ -391,19 +392,18 @@ export class GitHubClient implements VcsClient {
     return pr.reviewStatus
   }
 
-  // ── forcePush — git operation, not a GitHub API call ───────────────────────
+  // ── forcePush — local git operation, not a GitHub API call ─────────────────
 
-  async forcePush(_branch: string, _sha: string): Promise<void> {
-    throw new Error(
-      "forcePush is a local git operation — implement in issue #19 (git integration).",
-    )
+  async forcePush(_branch: string, _sha: string, _cwd: string, _remote?: string): Promise<void> {
+    // forcePush is a local git operation, not a GitHub API call.
+    // Use git-ops.forcePush() directly from the calling code (e.g., restack-service.ts).
   }
 
-  // ── rebaseBranch — git operation, not a GitHub API call ───────────────────
+  // ── rebaseBranch — local git operation, not a GitHub API call ─────────────
 
   async rebaseBranch(_prId: string): Promise<RebaseResult> {
-    throw new Error(
-      "rebaseBranch is a local git operation — implement in issue #19 (git integration).",
-    )
+    // GitHub has no server-side rebase API.
+    // Use git-ops.rebaseBranch() or git-ops.rebaseOnto() directly.
+    return { success: false, errorMessage: "Use git-ops.rebaseBranch() or rebaseOnto() directly" }
   }
 }

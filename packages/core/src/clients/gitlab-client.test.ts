@@ -59,6 +59,7 @@ function makeFetch(routes: FetchRoute[]): (url: string, init?: RequestInit) => P
   let call = 0
   return async (url: string, init?: RequestInit) => {
     const route = routes[call] ?? routes.at(-1)
+    if (!route) throw new Error("makeFetch: routes array is empty")
     call++
     return route(url, init)
   }
@@ -378,13 +379,12 @@ describe("GitLabClient rate-limit retry", () => {
   })
 })
 
-// ─── forcePush throws ─────────────────────────────────────────────────────────
+// ─── GitLabClient.forcePush and rebaseBranch ─────────────────────────────────
 
-describe("GitLabClient.forcePush", () => {
-  test("throws not-implemented error", async () => {
+describe("GitLabClient.forcePush and rebaseBranch", () => {
+  test("forcePush is a no-op (git operation, delegates to git-ops)", async () => {
     const client = new GitLabClient("tok", { _fetch: makeFetch([]) })
-    await expect(client.forcePush("branch", "sha")).rejects.toThrow(
-      "forcePush is a local git operation",
-    )
+    // forcePush now accepts cwd and remote args, and is a no-op (delegates to git-ops)
+    await expect(client.forcePush("branch", "sha", process.cwd())).resolves.toBeUndefined()
   })
 })

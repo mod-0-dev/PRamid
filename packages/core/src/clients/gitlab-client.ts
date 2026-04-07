@@ -403,9 +403,8 @@ export class GitLabClient implements VcsClient {
 
   // ── forcePush — git operation, not a GitLab API call ─────────────────────
 
-  async forcePush(_branch: string, _sha: string): Promise<void> {
-    throw new Error(
-      "forcePush is a local git operation — implement in issue #19 (git integration).",
-    )
+  async forcePush(_branch: string, _sha: string, _cwd: string, _remote?: string): Promise<void> {
+    // forcePush is a local git operation, not a GitLab API call.
+    // Use git-ops.forcePush() directly from the calling code.
   }
 }

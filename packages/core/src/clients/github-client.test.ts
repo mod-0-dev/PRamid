@@ -43,6 +43,7 @@ function makeGqlMock(
   let call = 0
   return mock((_query: string, _vars?: Record<string, unknown>) => {
     const page = pages[call++] ?? pages.at(-1)
+    if (!page) throw new Error("makeGqlMock: pages array is empty")
     const query = _query.trim()
     if (query.startsWith("query ListOpenPRs")) {
       return Promise.resolve({
@@ -332,19 +333,22 @@ describe("GitHubClient rate-limit retry", () => {
 })
 
 describe("GitHubClient unimplemented git operations", () => {
-  test("forcePush throws NotImplemented", async () => {
+  test("forcePush is a no-op (git operation, delegates to git-ops)", async () => {
     const client = new GitHubClient("tok", {
       _graphql: makeGqlMock([]) as never,
       _octokit: makeOctokitMock() as never,
     })
-    await expect(client.forcePush("stack/base", "abc123")).rejects.toThrow("git operation")
+    // forcePush now accepts cwd and remote args, and is a no-op (delegates to git-ops)
+    await expect(client.forcePush("stack/base", "abc123", process.cwd())).resolves.toBeUndefined()
   })
 
-  test("rebaseBranch throws NotImplemented", async () => {
+  test("rebaseBranch returns error (use git-ops directly)", async () => {
     const client = new GitHubClient("tok", {
       _graphql: makeGqlMock([]) as never,
       _octokit: makeOctokitMock() as never,
     })
-    await expect(client.rebaseBranch("github:acme/app#1")).rejects.toThrow("git operation")
+    const result = await client.rebaseBranch("github:acme/app#1")
+    expect(result.success).toBe(false)
+    expect(result.errorMessage).toContain("git-ops.rebaseBranch")
   })
 })
